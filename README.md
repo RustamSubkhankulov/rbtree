@@ -4,7 +4,7 @@ Implementation of Red-Black search tree.
 <img src="https://github.com/RustamSubkhankulov/cpp-course/blob/main/rbtree/images/example.png" alt="tree" width="800">
 
 ### Cloning & Building
- - Firstly, copy source files or clone this repository: <code>git clone git@github.com:RustamSubkhankulov/cpp-course.git</code>.
+ - Firstly, copy source files or clone this repository: <code>git clone git@github.com:RustamSubkhankulov/rbtree.git</code>.
  - Secondly, change current working directory: 
  <code>cd rbtree</code>
  - Thirdly, build tests:
