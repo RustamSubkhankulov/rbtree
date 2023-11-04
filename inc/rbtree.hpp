@@ -1,0 +1,1171 @@
+#pragma once
+
+#include <ios>
+#include <new>
+#include <stack>
+#include <string>
+#include <cstdio>
+#include <fstream>
+#include <sstream>
+#include <cstdint>
+#include <cstdlib>
+#include <cassert>
+#include <utility>
+#include <cstddef>
+#include <iterator>
+#include <iostream>
+#include <stdexcept>
+#include <functional>
+#include <type_traits>
+#include <initializer_list>
+
+#include "node.hpp"
+#include "iter.hpp"
+
+namespace RBTREE {
+
+namespace dtl = DETAIL;
+
+/* Red-black tree. */
+template <typename Key, typename Compare = std::less<Key>> 
+class rbtree {
+
+public:
+
+  using key_type        = Key;
+  using size_type       = std::size_t;
+  using difference_type = std::ptrdiff_t;
+  using key_compare     = Compare;    
+
+  using const_reference = const key_type&;
+  using const_pointer = const key_type*;
+
+private:
+
+  /* Node structure */
+  using node = dtl::node_t<key_type>;
+  /* Static end node type used for implementing post-end iterator */
+  using end_node = typename node::end_node;
+
+  /* Root. */
+  using root_type = dtl::root<node>;
+  root_type root;
+
+  /* Dynamically updated leftmost node pointer for constant complexity begin(). */
+  const end_node* leftmost = root.end_node_ptr();
+
+  /* Comparator. */
+  Compare cmp;
+
+  /* Get pointer to end_node of the tree. */
+  const end_node* end_node_ptr() const { return root.end_node_ptr(); }
+  end_node* end_node_ptr() { return root.end_node_ptr(); }
+
+  /* Checks wether given node is root. */
+  bool is_root(const node* node) const noexcept { return (node == root.get()); }
+
+public:
+  /* Bidirectional iterator. */
+  using const_iterator = dtl::const_iter<node>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+  /* Default ctor. */
+  rbtree(const Compare& compare = Compare()) 
+  noexcept(std::is_nothrow_copy_constructible_v<Compare>)
+  : cmp(compare) {}
+
+  /* Ctor from range defined by two iterators. */
+  template <typename InputIt>
+  rbtree(InputIt first, InputIt last, const Compare& compare = Compare())
+  : cmp(compare) {
+
+    for (; first != last; ++first) {
+      insert(*first);
+    }
+  }
+
+  rbtree(std::initializer_list<key_type> init, const Compare& compare = Compare())
+  : rbtree(init.begin(), init.end(), compare) {}
+
+  /* Copy ctor. */
+  rbtree(const rbtree& that)
+  : cmp(that.cmp) {
+
+    auto [copy_root, copy_leftmost] = that.copy_subtree(that.root.get());
+    root.set(copy_root);
+    leftmost = copy_leftmost;
+  }
+
+  /* Move ctor. */
+  rbtree(rbtree&& that)
+  noexcept(std::is_nothrow_move_constructible_v<node> &&
+           std::is_nothrow_move_constructible_v<Compare>)
+  : root(std::move(that.root)),
+    leftmost(std::exchange(that.leftmost, that.root.end_node_ptr())), 
+    cmp(std::move(that.cmp)) {}
+
+  /* Copy assignment. */
+  rbtree& operator=(const rbtree& that) {
+
+    if (this == &that)
+      return *this;
+
+    auto temp{that};
+    swap(temp);
+
+    return *this;
+  }
+
+  /* Move assignment. */
+  rbtree& operator=(rbtree&& that) 
+  noexcept(std::is_nothrow_swappable_v<node> &&
+           std::is_nothrow_swappable_v<Compare>) {
+
+    swap(that);
+    return *this;
+  }
+
+  virtual ~rbtree() {
+    free_subtree(root.get());
+  }
+
+  /* Insertion. */
+  std::pair<const_iterator, bool> insert(key_type&& key);
+  std::pair<const_iterator, bool> insert(const key_type& key);
+  template <typename InputIt>
+  void insert(InputIt first, InputIt last);
+  void insert(std::initializer_list<key_type> init);
+
+  /* 
+   * Emplacement - constructing element in-place. 
+   * Args are forwarded to constructor of element.
+   */
+  template< class... Args >
+  std::pair<const_iterator, bool> emplace( Args&&... args );
+
+  /* 
+   * Erasure - element pointed by a iterator, a range of elements
+   * defined by two iterators and element with a specific key.
+   */
+  const_iterator erase(const_iterator pos);
+  const_iterator erase(const_iterator first, const_iterator last);
+  bool erase(const key_type& key);
+
+  /* Swap contents of two trees. No copying of elements are performed. */
+  void swap(rbtree& that) 
+  noexcept(std::is_nothrow_swappable_v<node> &&
+           std::is_nothrow_swappable_v<Compare>) {
+
+    std::swap(root, that.root);
+    std::swap(leftmost, that.leftmost);
+    std::swap(cmp, that.cmp);
+  }
+
+  /* Find element with key equivalent to a given argument. */
+  const_iterator find (const key_type& key) const noexcept {
+    return const_iterator(find_equiv_node(root.get(), key));
+  }
+  /* Check wether element with key equivalent to a given is in the tree. */
+  bool contains(const key_type& key) const noexcept {
+    return (find_equiv_node(root.get(), key) != end_node_ptr());
+  }
+
+  /* 
+   * NOTE: no 'iterator' member type defined since 
+   * no elements should be changed. Changing keys of elements
+   * will violate its searching properties.
+   */
+
+  /* Iterator to the first element. */
+  const_iterator begin()  const noexcept { return const_iterator(leftmost); }
+  const_iterator cbegin() const noexcept { return const_iterator(leftmost); }
+
+  /* Reverise iterator to the first element. */
+  const_reverse_iterator rbegin()  const noexcept { return const_reverse_iterator(end());  }
+  const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
+
+  /* Past-end iterator. */
+  const_iterator end()  const noexcept { return const_iterator(end_node_ptr()); }
+  const_iterator cend() const noexcept { return const_iterator(end_node_ptr()); }
+
+  /* Reverse past-end iterator. */
+  const_reverse_iterator rend()  const noexcept { return const_reverse_iterator(begin());  }
+  const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
+
+  /* Checks whether the container is empty */
+  bool empty() const noexcept { return (root.get() == nullptr); }
+  /* Returns the number of elements */
+  size_type size() const noexcept { 
+    return (root.get() == nullptr)? 0 : root.get()->size; 
+  }
+
+  /* Clear contents of the tree. */
+  void clear() noexcept;
+
+  /* Distance between two nodes, defined by keys. */
+
+  difference_type distance(const_iterator first, const_iterator second) const noexcept {
+    return less_than(*second) - less_than(*first);
+  }
+
+  difference_type distance(const key_type& first, const key_type& second) const noexcept {
+    return less_than(second) - less_than(first);
+  }
+
+  /* Returns an iterator to the first element not less than the given key */
+  const_iterator lower_bound(const Key& key) const noexcept {
+    return const_iterator(find_lower_bound_node(root.get(), key));
+  }
+
+  /* Returns an iterator to the first element greater than the given key */
+  const_iterator upper_bound(const Key& key) const noexcept {
+    return const_iterator(find_upper_bound_node(root.get(), key));
+  }
+
+  /* Returns range of elements matching a specific key */
+  std::pair<const_iterator,const_iterator> equal_range(const Key& key) const {
+    return std::make_pair(lower_bound(key), upper_bound(key));
+  }
+
+  /* Returns the function that compares keys. */
+  key_compare key_comp() const { return cmp; }
+
+  /* Equality and unequality comparisons. */
+  friend bool operator==(const rbtree& lhs, const rbtree& rhs) {
+
+    return (lhs.size() == rhs.size()) 
+         && std::equal(lhs.begin(), lhs.end(), rhs.begin());
+  }
+
+  /* Graphical dump of the tree using graphviz dot. */
+  void graph_dump(const std::string& graph_name) const;
+
+private:
+
+  /* Make a copy of subtree. */
+  std::pair<node*, node*> copy_subtree(const node* subtree) const;
+  /* Helper for copying. */
+  std::pair<node*, node*> make_subtree_copy(const node* subtree) const;
+  /* Free given subtree. */
+  void free_subtree(node* subtree) const noexcept;
+
+  /* Equivalence relationship deduced from compare function. */
+  bool equiv(const key_type& lhs, const key_type& rhs) const {
+    return !(cmp(lhs, rhs)) && !(cmp(rhs, lhs));
+  }
+
+  /* 
+   *Link 'rhs' node into 'lhs' place in the tree. 
+   * Does not change its children
+   */
+  void transplant(node* lhs, node* rhs) noexcept;
+
+  /* Rotation methods for rebalancing. */
+  void right_rotate(node* subtree_root) noexcept;
+  void left_rotate (node* subtree_root) noexcept;
+
+  /* Insert node and perform fixes to maintain invariants of the RB-tree. */
+  bool insert_node(node* inserting);  
+  /* Insert node into a tree just like in a regular BST tree. */
+  bool insert_node_bst(node* subtree_root, node* inserting) noexcept;
+  
+  /* Fixing functions used on insertion. */
+  void insert_rb_fix(node* inserted) noexcept;
+  node* parent_grand_recolor(node* parent) noexcept;
+  node* uncle_parent_grand_recolor(node* uncle, node* parent) noexcept;
+
+  /* Delete given node and perform fixes to maintain invariants of the RB-tree. */
+  void delete_node(node* deleting);  
+
+  /* Fixing functions used on deletion. */
+  node* delete_rb_fix(node* erased) noexcept;  
+  std::pair<node*, node*> get_y_and_its_decs(node* y) noexcept;
+  void  delete_rb_rebalance(node* x, node* parent_of_x) noexcept;
+  node* delete_rb_rebalance_w_is_red(node* w, bool x_on_left, node* parent_of_x) noexcept;
+  void  delete_rb_update_leftmost(node* z, node* x) noexcept;
+
+  /* Helper function for finding nodes. */
+  const end_node* find_equiv_node(const node* subtree_root, key_type key) const noexcept;
+
+  const end_node* find_lower_bound_node(const node* subtree_root, key_type key) const noexcept;
+  const end_node* find_upper_bound_node(const node* subtree_root, key_type key) const noexcept;
+  
+  /* Increase subtree size for each node in route from nd to root by 1. */
+  void incr_subtree_sizes(end_node* nd) noexcept;
+
+  /* Decrease subtree size for each node in route from nd to root by 1. */
+  void decr_subtree_sizes(end_node* nd) noexcept;
+
+  /* Get number of element smaller thatn given. */
+  size_type less_than(const key_type& key) const noexcept;
+
+  /* Validate tree - checks its rRB-properties. */
+  bool debug_validate() const noexcept;
+
+  /* Helper function for graphical dump. */
+  void write_dot(std::ofstream& of) const;
+  static void generate_graph(const std::string& dot_file, 
+                             const std::string& graph_name);
+}; 
+
+template <typename Key, typename Compare>
+std::pair<typename rbtree<Key, Compare>::const_iterator, bool>
+rbtree<Key, Compare>::insert(key_type&& key) {
+  
+  if (find_equiv_node(root.get(), key) != end_node_ptr()) {
+    return std::make_pair(cend(), false);
+  } 
+
+  node* nd = new node(std::move(key));
+  insert_node(nd);
+  return std::make_pair(const_iterator(nd), true);
+}
+
+template <typename Key, typename Compare>
+std::pair<typename rbtree<Key, Compare>::const_iterator, bool>
+rbtree<Key, Compare>::insert(const key_type& key) {
+
+  if (find_equiv_node(root.get(), key) != end_node_ptr()) {
+    return std::make_pair(cend(), false);
+  }
+
+  node* nd = new node(key);
+  insert_node(nd);
+  return std::make_pair(const_iterator(nd), true);
+}
+
+template <typename Key, typename Compare>
+template <typename InputIt>
+void rbtree<Key, Compare>::insert(InputIt first, InputIt last) {
+
+  for (auto it = first; it != last; ++it) {
+    insert(*it);
+  }
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::insert(std::initializer_list<key_type> init) {
+  insert(init.begin(), init.end());
+}
+
+template <typename Key, typename Compare>
+template< class... Args >
+std::pair<typename rbtree<Key, Compare>::const_iterator, bool> 
+rbtree<Key, Compare>::emplace( Args&&... args ) {
+
+  node* nd = new node(std::forward<Args>(args)...);
+  if (insert_node(nd)) {
+    return std::make_pair(const_iterator(nd), true);
+  }
+
+  delete nd;
+  return std::make_pair(cend(), false);
+}
+
+template <typename Key, typename Compare>
+typename rbtree<Key, Compare>::const_iterator 
+rbtree<Key, Compare>::erase(const_iterator pos) {
+
+  const_iterator next = std::next(pos);
+  delete_node(const_cast<node*>(static_cast<const node*>(pos.node_ptr_)));
+  return next;
+}
+
+template <typename Key, typename Compare>
+typename rbtree<Key, Compare>::const_iterator 
+rbtree<Key, Compare>::erase(const_iterator first, const_iterator last) {
+
+  auto it = first;
+
+  while (it != last) {
+    it = erase(it);
+  }
+  
+  return it;
+}
+
+template <typename Key, typename Compare>
+bool rbtree<Key, Compare>::erase(const key_type& key) {
+
+  const end_node* nd = find_equiv_node(root.get(), key);
+  if (nd == end_node_ptr()) {
+    return false;
+  }
+
+  delete_node(const_cast<node*>(static_cast<const node*>(nd)));
+  return true;
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::clear() noexcept {
+
+  free_subtree(root.get());
+  root.set(nullptr);
+  leftmost = root.end_node_ptr();
+}
+
+template <typename Key, typename Compare>
+std::pair<typename rbtree<Key, Compare>::node*,
+          typename rbtree<Key, Compare>::node*>
+rbtree<Key, Compare>::copy_subtree(const node* subtree) const {
+
+  if (subtree == nullptr) {
+    return std::make_pair(nullptr, nullptr);
+  }
+
+  return make_subtree_copy(subtree);
+}
+
+template <typename Key, typename Compare>
+std::pair<typename rbtree<Key, Compare>::node*,
+          typename rbtree<Key, Compare>::node*>
+rbtree<Key, Compare>::make_subtree_copy(const node* subtree) const {
+
+  node *copy_root = new node(*subtree), *copy_leftmost;
+  node *copy = copy_root, *child;
+  end_node* parent;
+
+  do {
+
+    if (subtree->has_left() && !copy->has_left()) {
+
+      subtree = subtree->left;
+      if ((child = new(std::nothrow) node(*subtree)) == nullptr) {
+
+        free_subtree(copy_root);
+        throw std::bad_alloc();
+      }
+
+      copy->tie_left(child);
+      copy = copy->left;
+
+    } else if (subtree->has_right() && !copy->has_right()) {
+
+      subtree = subtree->right;
+      if ((child = new(std::nothrow) node(*subtree)) == nullptr) {
+
+        free_subtree(copy_root);
+        throw std::bad_alloc();
+      }
+
+      copy->tie_right(child);      
+      copy = copy->right;
+
+    } else {
+
+      if (subtree == leftmost) {
+        copy_leftmost = copy;
+      }
+
+      copy = copy->parent();
+      parent = subtree->parent_as_end();
+      subtree = subtree->parent();
+    }
+
+  } while (parent != end_node_ptr());
+
+  return std::make_pair(copy_root, copy_leftmost);
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
+
+  if (subtree == nullptr) {
+    return;
+  }
+
+  end_node* parent;
+
+  do {
+
+    if (subtree->has_left()) {
+      subtree = subtree->left;
+
+    } else if (subtree->has_right()) {
+      subtree = subtree->right;
+
+    } else {
+
+      node* deleting = subtree;
+      parent = subtree->parent_as_end();
+      subtree = subtree->parent();
+
+      if (parent != end_node_ptr()) {
+
+        if (deleting->on_left()) {
+          subtree->left = nullptr;
+
+        } else {
+          subtree->right = nullptr;
+        }
+      }
+
+      delete deleting;
+    }
+
+  } while (parent != end_node_ptr());
+}
+
+template <typename Key, typename Compare>
+const typename rbtree<Key, Compare>::end_node* 
+rbtree<Key, Compare>::find_equiv_node(const node* subtree_root, key_type key) const noexcept {
+
+  while (subtree_root != nullptr) {
+
+    if (equiv(key, subtree_root->value)) {
+      return subtree_root;
+    }
+
+    if (cmp(key, subtree_root->value)) {
+      subtree_root = subtree_root->left;
+
+    } else {
+      subtree_root = subtree_root->right;
+    }
+  }
+
+  return end_node_ptr();
+}
+
+template <typename Key, typename Compare>
+const typename rbtree<Key, Compare>::end_node* 
+rbtree<Key, Compare>::find_lower_bound_node(const node* subtree_root, 
+                                                        key_type key) const noexcept {
+  
+  const end_node* res = end_node_ptr();
+  while (subtree_root != nullptr) {
+
+    if (!cmp(subtree_root->value, key)) {
+      res = std::exchange(subtree_root, subtree_root->left);
+    } else {
+      subtree_root = subtree_root->right;
+    }
+  }
+
+  return res;
+}
+
+template <typename Key, typename Compare>
+const typename rbtree<Key, Compare>::end_node* 
+rbtree<Key, Compare>::find_upper_bound_node(const node* subtree_root, 
+                                                        key_type key) const noexcept {
+
+  const end_node* res = end_node_ptr();
+  while (subtree_root != nullptr) {
+
+    if (cmp(key, subtree_root->value)) {
+      res = std::exchange(subtree_root, subtree_root->left);
+    } else {
+      subtree_root = subtree_root->right;
+    }
+  }
+
+  return res;
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::transplant(node* u, node* v) noexcept {
+
+  if (is_root(u)) {
+    root.set(v);
+
+  } else if (u->on_left()) {
+    u->parent()->tie_left(v);
+
+  } else {
+    u->parent()->tie_right(v);
+  }
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
+
+  if (subtree_root == nullptr || !subtree_root->has_left())
+    return;
+
+  node* rotating = subtree_root->left;
+  subtree_root->tie_left(rotating->right);
+
+  if (is_root(subtree_root)) {
+    root.set(rotating);
+
+  } else {
+
+    node* parent = subtree_root->parent();
+    
+    if (parent->left == subtree_root) {
+      parent->tie_left(rotating);
+
+    } else { /* parent->right == subtree_root */
+      parent->tie_right(rotating);
+    }
+  }
+
+  rotating->tie_right(subtree_root);
+
+  subtree_root->size -= 1 + ((rotating->left)? rotating->left->size : 0);
+  rotating->size += 1 + ((subtree_root->right)? subtree_root->right->size : 0);
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
+
+  if (subtree_root == nullptr || !subtree_root->has_right())
+    return;
+
+  node* rotating = subtree_root->right;
+  subtree_root->tie_right(rotating->left);
+
+  if (is_root(subtree_root)) {
+    root.set(rotating);
+
+  } else {
+
+    node* parent = subtree_root->parent();
+    
+    if (parent->left == subtree_root) {
+      parent->tie_left(rotating);
+
+    } else {
+      parent->tie_right(rotating);
+    }
+  }
+
+  rotating->tie_left(subtree_root);
+
+  subtree_root->size -= 1 + ((rotating->right)? rotating->right->size : 0);
+  rotating->size += 1 + ((subtree_root->left)? subtree_root->left->size : 0);
+}
+
+template <typename Key, typename Compare>
+bool rbtree<Key, Compare>::insert_node(node* inserting) {
+
+  if (empty()) {
+
+    root.set(inserting);
+    leftmost = inserting;
+    inserting->paint(node::color::BLACK);
+
+  } else {
+    
+    if (!insert_node_bst(root.get(), inserting)) {
+      return false;
+    }
+
+    incr_subtree_sizes(inserting->parent());
+
+    if (inserting == leftmost->left) {
+      leftmost = inserting;
+    }
+  }
+
+  insert_rb_fix(inserting);
+
+  assert(debug_validate());
+  return true;
+}
+
+template <typename Key, typename Compare>
+typename rbtree<Key, Compare>::node* 
+rbtree<Key, Compare>::parent_grand_recolor(node* parent) noexcept {
+
+  using color_t = enum node::color;
+
+  parent->paint(color_t::BLACK);
+
+  node* grand = parent->parent();
+  if (!is_root(parent)) {
+    grand->paint(color_t::RED);
+  }
+
+  return grand;
+}
+
+template <typename Key, typename Compare>
+typename rbtree<Key, Compare>::node* 
+rbtree<Key, Compare>::uncle_parent_grand_recolor(node* uncle, node* parent) noexcept {
+
+  using color_t = enum node::color;
+
+  uncle->paint(color_t::BLACK);
+  parent->paint(color_t::BLACK);
+
+  node* grand = parent->parent();
+  if (!is_root(parent)) {
+    grand->paint(color_t::RED);
+  }
+
+  return grand;
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::insert_rb_fix(node* new_node) noexcept {
+
+  node *uncle, *parent = new_node->parent();
+
+  while (!is_root(new_node) && parent->is_red()) {
+
+    if (parent->on_left()) {
+
+      uncle = new_node->uncle();
+      if (uncle != nullptr && uncle->is_red()) {
+
+        /* new_node = new_node->parent->parent */
+        new_node = uncle_parent_grand_recolor(uncle, parent);
+      
+      } else {
+
+        if (new_node->on_right()) {
+
+          left_rotate(parent);
+          parent = new_node;
+        }
+
+        right_rotate(parent_grand_recolor(parent));
+        break;
+      }
+
+    } else {
+
+      uncle = new_node->uncle();
+      if (uncle != nullptr && uncle->is_red()) {
+
+        /* new_node = new_node->parent->parent */
+        new_node = uncle_parent_grand_recolor(uncle, parent);
+
+      } else {
+
+        if (new_node->on_left()) {
+
+          right_rotate(parent);
+          parent = new_node;
+        }
+
+        left_rotate(parent_grand_recolor(parent));
+        break;
+      }
+    }
+
+    parent = new_node->parent();
+  }
+
+  root.get()->paint(node::color::BLACK);
+}
+
+template <typename Key, typename Compare>
+bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) noexcept {
+
+  node* current = subtree_root;
+  node* parent = subtree_root->parent();
+  node** place;
+
+  while (current != nullptr) {
+
+    parent = current;
+    if (equiv(inserting->value, current->value)) {
+      return false;
+    }
+
+    if (!cmp(inserting->value, current->value)) {
+
+      place = &current->right;
+      current = current->right;
+
+    } else {
+
+      place = &current->left;
+      current = current->left;
+    }
+  }
+
+  *place = inserting;
+  inserting->set_parent(parent);
+
+  return true;
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::delete_node(node* deleting) {
+
+  node* nd = delete_rb_fix(deleting);
+
+  decr_subtree_sizes(nd);
+  delete nd;
+
+  assert(debug_validate());
+}
+
+template <typename Key, typename Compare>
+std::pair<typename rbtree<Key, Compare>::node*, 
+          typename rbtree<Key, Compare>::node*>
+rbtree<Key, Compare>::get_y_and_its_decs(node* y) noexcept {
+
+  if (!y->has_left()) {
+    return std::make_pair(y, y->right);
+
+  } else {
+
+    if (!y->has_right()) {
+      return std::make_pair(y, y->left);
+    
+    } else { /* z has two non-null children */
+
+      y = node::get_leftmost_desc(y->right);
+      return std::make_pair(y, y->right);
+    }
+  }
+}
+
+template <typename Key, typename Compare>
+typename rbtree<Key, Compare>::node* 
+rbtree<Key, Compare>::delete_rb_rebalance_w_is_red(node* w, bool x_on_left, 
+                                                         node* parent_of_x) noexcept {
+
+  using color_t = enum node::color;
+
+  w->paint(color_t::BLACK);
+  parent_of_x->paint(color_t::RED);
+
+  if (x_on_left) {
+      
+    left_rotate(parent_of_x);
+    return parent_of_x->right;
+
+  } else {
+    
+    right_rotate(parent_of_x);
+    return parent_of_x->left;
+  }
+
+  return w;
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexcept {
+
+  using color_t = enum node::color;
+
+  while (!is_root(x) && (x == nullptr || x->color == color_t::BLACK)) {
+
+    bool x_on_left = (x == parent_of_x->left);
+    node* w = (x_on_left)? parent_of_x->right : parent_of_x->left;
+    
+    if (w == nullptr) {
+      break;
+    }
+
+    if (w->is_red()) {
+      w = delete_rb_rebalance_w_is_red(w, x_on_left, parent_of_x);
+    }
+
+    if (w == nullptr) {
+      break;
+    }
+
+    /* NOTE: nullptr node is also black one */
+    if (node::is_black(w->left) && node::is_black(w->right)) {
+
+      w->paint(color_t::RED);
+      x = parent_of_x;
+      parent_of_x = parent_of_x->parent();
+
+    } else {
+
+      if (x_on_left) {
+
+        if (w->right == nullptr || w->right->color == color_t::BLACK) {
+
+          w->left->color = color_t::BLACK;
+          w->color = color_t::RED;
+          right_rotate(w);
+          w = parent_of_x->right;
+        }
+
+      } else {
+
+        if (w->left == nullptr || w->left->color == color_t::BLACK) {
+
+          w->right->color = color_t::BLACK;
+          w->color = color_t::RED;
+          left_rotate(w);
+          w = parent_of_x->left;
+        }
+      }
+
+      w->color = parent_of_x->color;
+      parent_of_x->paint(color_t::BLACK);
+
+      node*& nd = (x_on_left)? w->right : w->left;
+      if (nd != nullptr) {
+        nd->paint(color_t::BLACK);
+      }
+
+      if (x_on_left) {
+        left_rotate(parent_of_x);
+      } else {
+        right_rotate(parent_of_x);
+      }
+      break;
+    }
+
+    if (x != nullptr) {
+      x->color = color_t::BLACK;
+    }
+  }
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::delete_rb_update_leftmost(node* z, node* x) noexcept {
+
+  if (!z->has_right()) {
+    
+    if (!is_root(z)) {
+      leftmost = z->parent();
+    } else {
+      leftmost = nullptr;
+    }
+  
+  } else {
+    leftmost = node::get_leftmost_desc(x);
+  }
+}
+
+template <typename Key, typename Compare>
+typename rbtree<Key, Compare>::node*
+rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
+
+  node* parent_of_x = nullptr;
+  auto [y, x] = get_y_and_its_decs(z);
+
+  if (y != z) {
+
+    z->left->set_parent(y); /* relink y in place of z, y is z's desc */
+    y->left = z->left;
+
+    if (y != z->right) {
+
+      parent_of_x = y->parent();
+      if (x != nullptr) {
+        x->set_parent(y->parent());
+      }
+
+      y->parent()->left = x;
+      y->right = z->right;
+      z->right->set_parent(y);
+    
+    } else {
+      parent_of_x = y;
+    }
+
+    transplant(z, y);
+
+    std::swap(y->color, z->color);
+    y = z; /* y now points to node to be actually deleted */
+  
+  } else {
+
+    /* y == z */
+    parent_of_x = y->parent();
+    if (x != nullptr) {
+      x->set_parent(y->parent());
+    }
+
+    transplant(z, x);
+
+    if (leftmost == z) {
+      delete_rb_update_leftmost(z, x);
+    }
+  }
+
+  if (y->is_black()) {
+    delete_rb_rebalance(x, parent_of_x);
+  }
+
+  return y;
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::incr_subtree_sizes(end_node* nd) noexcept {
+
+  if (nd == nullptr) {
+    return;
+  }
+
+  node* cur;
+  for (; nd != end_node_ptr(); cur = static_cast<node*>(nd),
+                             ++cur->size, 
+                          nd = cur->parent_as_end())
+    continue;
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::decr_subtree_sizes(end_node* nd) noexcept {
+
+  if (nd == nullptr) {
+    return;
+  }
+
+  node* cur;
+  for (; nd != end_node_ptr(); cur = static_cast<node*>(nd),
+                             --cur->size, 
+                          nd = cur->parent_as_end())
+    continue;
+}
+
+template <typename Key, typename Compare>
+typename rbtree<Key, Compare>::size_type 
+rbtree<Key, Compare>::less_than(const key_type& key) const noexcept {
+
+  const end_node* current = find_lower_bound_node(root.get(), key);
+
+  if (current == end_node_ptr()) {
+    return size();
+  }
+
+  size_type number = node::subtree_size(current->left);
+
+  while (current != end_node_ptr()) {
+
+    auto nd = static_cast<const node*>(current);
+    if (nd->on_right()) {
+      number += 1 + node::subtree_size(nd->sibling());
+    }
+
+    current = static_cast<const node*>(current)->parent_as_end();
+  }
+
+  return number;
+}
+
+template <typename Key, typename Compare>
+bool rbtree<Key, Compare>::debug_validate() const noexcept {
+
+  const node* root_node = root.get();
+
+  if (root_node == nullptr) {
+    return true;
+  }
+
+  bool res = true;
+
+  if (root_node->color != node::color::BLACK) {
+
+    std::cerr << "Debug validation: root is not black. \n";
+    res = false;
+  }
+
+  if (!root_node->debug_validate()) {
+    res = false;
+  }
+
+  if (!res) {
+    std::cerr << "Debug validation: FAILED \n";
+  }
+
+  return res;
+}
+
+/* 
+ * Makes graphical dump of the tree using graphviz dot
+ * Generates file with name 'graph_name' in png format in current 
+ * working directory. 
+ */
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::graph_dump(const std::string& graph_name) const {
+
+  char dot_file_name[] = "graphXXXXXX";
+  if (mkstemp(dot_file_name) == -1) {
+    
+    std::cerr << "graph_dump(): mkstemp() failed.\n";
+    return;
+  }
+
+  std::ofstream dot_file(dot_file_name, std::ios_base::out 
+                                      | std::ios_base::trunc);
+  if (!dot_file.is_open()) {
+
+    std::cerr << "graph_dump(): failed to open temp file.\n";
+    return; 
+  }
+  
+  dot_file << "digraph G{\n rankdir=TB;\n "
+           << "node[ shape = doubleoctagon; style = filled ];\n"
+           << "edge[ arrowhead = vee ];\n";
+
+  write_dot(dot_file);
+
+  dot_file << "\n}\n";
+  dot_file.close();
+
+  generate_graph(dot_file_name, graph_name);
+  remove(dot_file_name);
+}
+
+/* Call dot to generate png image from txt source. */
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::generate_graph(const std::string& dot_file, 
+                                         const std::string& graph_name) {
+
+  std::string cmnd = "dot " + dot_file + " -Tpng -o " + graph_name;
+  std::system(cmnd.c_str());
+}
+
+/* Write tree desctiption in dot format to temporary text file. */
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::write_dot(std::ofstream& of) const {
+
+  using std::size_t;
+
+  node::write_pastend_dot(of, reinterpret_cast<uintptr_t>(end_node_ptr()));
+
+  if (empty()) {
+    return;
+  }
+
+  if (root.get() != nullptr) {
+
+    of << "NODE" << end_node_ptr() << " -> "
+       << "NODE" << root.get() << " ["
+       << " label = \"L\" ]; \n";
+  }
+
+  for (const end_node* nd = node::get_leftmost_desc(root.get()); nd != end_node_ptr();) {
+
+    auto cur = static_cast<const node*>(nd);
+    cur->write_dot(of);
+
+    if (cur->has_right()) {
+      nd = node::get_leftmost_desc(cur->right);
+
+    } else {
+
+      const node* prev = cur;
+      nd = cur->parent();
+
+      while (nd != end_node_ptr()) {
+
+        if (prev == nd->left) {
+          break;
+        }
+
+        prev = static_cast<const node*>(nd);
+        nd = prev->parent();  
+      }
+    }
+  }
+}
+
+}; /* namespace RBTREE */
+
+namespace std {
+
+template <typename Key, typename Compare>
+constexpr void swap(::RBTREE::rbtree<Key, Compare>& lhs, 
+                    ::RBTREE::rbtree<Key, Compare>& rhs) 
+noexcept(std::is_nothrow_move_constructible_v<::RBTREE::rbtree<Key, Compare>> && 
+         std::is_nothrow_move_assignable_v<::RBTREE::rbtree<Key, Compare>>) {
+
+  lhs.swap(rhs);
+}
+
+}; /* namespace std */

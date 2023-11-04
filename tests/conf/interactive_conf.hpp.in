@@ -1,0 +1,2 @@
+#cmakedefine STDDIST @STDDIST@
+#cmakedefine MEASURE_TIME @MEASURE_TIME@
