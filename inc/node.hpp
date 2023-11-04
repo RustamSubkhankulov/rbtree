@@ -22,6 +22,8 @@ template <typename Node>
 struct end_node_t {
 
   using node_t = Node;
+
+  bool left_is_thread = false;
   node_t* left = nullptr;
 
   end_node_t(node_t* lft = nullptr) noexcept:
@@ -31,10 +33,12 @@ struct end_node_t {
   end_node_t& operator=(const end_node_t& that) = delete;
 
   end_node_t(end_node_t&& that) noexcept
-  : left(std::exchange(that.left, nullptr)) {} 
+  : left(std::exchange(that.left, nullptr)),
+    left_is_thread(std::exchange(that.left_is_thread, false)) {} 
 
   end_node_t& operator=(end_node_t&& that) noexcept {
     std::swap(left, that.left);
+    std::swap(left_is_thread, that.left_is_thread);
     return *this;
   }
 
@@ -43,12 +47,24 @@ struct end_node_t {
   node_t* tie_left(node_t* child) noexcept {
 
     node_t* prev = left;
+
+    left_is_thread = false;
     left = child;
     
     if (left != nullptr) {
       left->set_parent(this);
     }
 
+    return prev;
+  }
+
+  node_t* stitch_left(node_t* nd) noexcept {
+
+    node_t* prev = left;
+
+    left_is_thread = true;
+    left = nd;
+    
     return prev;
   }
 
@@ -79,6 +95,7 @@ public:
   /* Subtree size. */
   size_type size = 1;
 
+  bool right_is_thread = false;
   node_t* right = nullptr;
 
 private:
@@ -101,8 +118,9 @@ public:
     value(std::move(that.value)),
     color(that.color), 
     size(std::exchange(that.size, 1)),
-    parent_(std::exchange(that.parent_, nullptr)),
-    right(std::exchange(that.right, nullptr)) {}
+    right_is_thread(std::exchange(that.right_is_thread, false)),
+    right(std::exchange(that.right, nullptr)),
+    parent_(std::exchange(that.parent_, nullptr)) {}
 
   node_t& operator=(node_t&& that) 
   noexcept(std::is_nothrow_swappable_v<key_type>) {
@@ -111,8 +129,10 @@ public:
     std::swap(value, that.value);
     std::swap(color, that.color);
     std::swap(size, that.size);
-    std::swap(parent_, that.parent_);
+    std::swap(right_is_thread, that.right_is_thread);
     std::swap(right, that.right);
+    std::swap(parent_, that.parent_);
+
   }
 
   /* Construct node that holds copy of key. */
@@ -125,6 +145,7 @@ public:
   noexcept(std::is_nothrow_move_constructible_v<key_type>)
   : value(std::move(key)) {}
 
+  using end_node::left_is_thread;
   using end_node::left;
 
   /* Get parent node as end_node pointer or node_t pointer. */
@@ -163,12 +184,25 @@ public:
   node_t* tie_right(node_t* child) noexcept {
 
     node_t* prev = right;
+
+    right_is_thread = false;
     right = child;
 
     if (right != nullptr) {
       right->set_parent(this);      
     }
 
+    return prev;
+  }
+
+  using end_node::stitch_left;
+  node_t* stitch_right(node_t* nd) noexcept {
+
+    node_t* prev = left;
+
+    right_is_thread = true;
+    right = nd;
+    
     return prev;
   }
 
@@ -197,6 +231,12 @@ public:
   static size_type subtree_size(const node_t* subtree_root) noexcept {
     return (subtree_root != nullptr)? subtree_root->size : 0;
   }
+
+  static const node_t* get_prev(const node_t* node_ptr) noexcept;
+  static node_t* get_prev(node_t* node_ptr) noexcept;
+
+  static const node_t* get_next(const node_t* node_ptr) noexcept;
+  static node_t* get_next(node_t* node_ptr) noexcept;
 
   /* Validate node - checks its rRB-properties. */
   bool debug_validate() const;
@@ -246,6 +286,106 @@ const node_t<Key>* node_t<Key>::get_rightmost_desc(const node_t* cur) noexcept {
   }
 
   return cur;
+}
+
+template <typename Key>
+const node_t<Key>* node_t<Key>::get_prev(const node_t* node_ptr) noexcept {
+
+  if (node_ptr->has_left()) {
+    return node_t::get_rightmost_desc(node_ptr->left);
+
+  } else {
+
+    const node_t* prev = node_ptr;
+    node_ptr = node_ptr->parent();
+
+    while (node_ptr->parent() != nullptr) {
+
+      if (prev == node_ptr->right) {
+        break;
+      }
+
+      prev = node_ptr;
+      node_ptr = node_ptr->parent();  
+    }
+
+    return node_ptr;
+  }
+}
+
+template <typename Key>
+node_t<Key>* node_t<Key>::get_prev(node_t* node_ptr) noexcept {
+
+  if (node_ptr->has_left()) {
+    return node_t::get_rightmost_desc(node_ptr->left);
+
+  } else {
+
+    node_t* prev = node_ptr;
+    node_ptr = node_ptr->parent();
+
+    while (node_ptr->parent() != nullptr) {
+
+      if (prev == node_ptr->right) {
+        break;
+      }
+
+      prev = node_ptr;
+      node_ptr = node_ptr->parent();  
+    }
+
+    return node_ptr;
+  }
+}
+
+template <typename Key>
+const node_t<Key>* node_t<Key>::get_next(const node_t* node_ptr) noexcept {
+
+  if (node_ptr->has_right()) {
+    return node_t::get_leftmost_desc(node_ptr->right);
+
+  } else {
+
+    const node_t* prev = node_ptr;
+    node_ptr = node_ptr->parent();
+
+    while (node_ptr->parent() != nullptr) {
+
+      if (prev == node_ptr->left) {
+        break;
+      }
+
+      prev = node_ptr;
+      node_ptr = node_ptr->parent();  
+    }
+
+    return node_ptr;
+  }
+}
+
+template <typename Key>
+node_t<Key>* node_t<Key>::get_next(node_t* node_ptr) noexcept {
+
+  if (node_ptr->has_right()) {
+    return node_t::get_leftmost_desc(node_ptr->right);
+
+  } else {
+
+    node_t* prev = node_ptr;
+    node_ptr = node_ptr->parent();
+
+    while (node_ptr->parent() != nullptr) {
+
+      if (prev == node_ptr->left) {
+        break;
+      }
+
+      prev = node_ptr;
+      node_ptr = node_ptr->parent();  
+    }
+
+    return node_ptr;
+  }
 }
 
 template <typename Key>
@@ -358,9 +498,12 @@ void DETAIL::node_t<Key>::write_dot(std::ofstream& of) const {
   }
 
   of << "NODE" << this << " -> "
-     << "NODE" << l << " [ label = \"L\" ]; \n";
+     << "NODE" << l << " [ label = \"L\" "
+     << ((left_is_thread)? "style = \"dotted\"  ]; \n" : " ]; \n");
+
   of << "NODE" << this << " -> "
-     << "NODE" << r << " [ label = \"R\" ]; \n";
+     << "NODE" << r << " [ label = \"R\" "
+     << ((right_is_thread)? "style = \"dotted\"  ]; \n" : " ]; \n");
 }
 
 /* Helper function to add nill nodes. */

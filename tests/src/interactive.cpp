@@ -130,6 +130,8 @@ int main() {
     }
   }
 
+  set.graph_dump("graph.png");
+
   /* Print elapsed time if option is enabled. */
   #if defined(MEASURE_TIME)
     print_elapsed(std::cout, steady_clock::now() - begin);

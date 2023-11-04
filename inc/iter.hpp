@@ -61,8 +61,6 @@ public:
 
   template <typename Key, typename Compare>
   friend class ::RBTREE::rbtree;
-
-  // friend difference_type std::distance<>(const_iter first, const_iter second);
 };
 
 template <typename Node>
