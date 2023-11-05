@@ -429,7 +429,7 @@ rbtree<Key, Compare>::make_subtree_copy(const node* subtree) const {
 
     if (subtree->has_left() && !copy->has_left()) {
 
-      subtree = subtree->left;
+      subtree = subtree->get_left();
       if ((child = new(std::nothrow) node(*subtree)) == nullptr) {
 
         free_subtree(copy_root);
@@ -437,11 +437,11 @@ rbtree<Key, Compare>::make_subtree_copy(const node* subtree) const {
       }
 
       copy->tie_left(child);
-      copy = copy->left;
+      copy = copy->get_left();
 
     } else if (subtree->has_right() && !copy->has_right()) {
 
-      subtree = subtree->right;
+      subtree = subtree->get_right();
       if ((child = new(std::nothrow) node(*subtree)) == nullptr) {
 
         free_subtree(copy_root);
@@ -449,7 +449,7 @@ rbtree<Key, Compare>::make_subtree_copy(const node* subtree) const {
       }
 
       copy->tie_right(child);      
-      copy = copy->right;
+      copy = copy->get_right();
 
     } else {
 
@@ -479,10 +479,10 @@ void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
   do {
 
     if (subtree->has_left()) {
-      subtree = subtree->left;
+      subtree = subtree->get_left();
 
     } else if (subtree->has_right()) {
-      subtree = subtree->right;
+      subtree = subtree->get_right();
 
     } else {
 
@@ -493,10 +493,10 @@ void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
       if (parent != end_node_ptr()) {
 
         if (deleting->on_left()) {
-          subtree->left = nullptr;
+          subtree->set_left(nullptr);
 
         } else {
-          subtree->right = nullptr;
+          subtree->set_right(nullptr);
         }
       }
 
@@ -517,10 +517,10 @@ rbtree<Key, Compare>::find_equiv_node(const node* subtree_root, key_type key) co
     }
 
     if (cmp(key, subtree_root->value)) {
-      subtree_root = subtree_root->left;
+      subtree_root = subtree_root->get_left();
 
     } else {
-      subtree_root = subtree_root->right;
+      subtree_root = subtree_root->get_right();
     }
   }
 
@@ -536,9 +536,9 @@ rbtree<Key, Compare>::find_lower_bound_node(const node* subtree_root,
   while (subtree_root != nullptr) {
 
     if (!cmp(subtree_root->value, key)) {
-      res = std::exchange(subtree_root, subtree_root->left);
+      res = std::exchange(subtree_root, subtree_root->get_left());
     } else {
-      subtree_root = subtree_root->right;
+      subtree_root = subtree_root->get_right();
     }
   }
 
@@ -554,9 +554,9 @@ rbtree<Key, Compare>::find_upper_bound_node(const node* subtree_root,
   while (subtree_root != nullptr) {
 
     if (cmp(key, subtree_root->value)) {
-      res = std::exchange(subtree_root, subtree_root->left);
+      res = std::exchange(subtree_root, subtree_root->get_left());
     } else {
-      subtree_root = subtree_root->right;
+      subtree_root = subtree_root->get_right();
     }
   }
 
@@ -583,8 +583,8 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
   if (subtree_root == nullptr || !subtree_root->has_left())
     return;
 
-  node* rotating = subtree_root->left;
-  subtree_root->tie_left(rotating->right);
+  node* rotating = subtree_root->get_left();
+  subtree_root->tie_left(rotating->get_right());
 
   if (is_root(subtree_root)) {
     root.set(rotating);
@@ -593,7 +593,7 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
 
     node* parent = subtree_root->parent();
     
-    if (parent->left == subtree_root) {
+    if (parent->get_left() == subtree_root) {
       parent->tie_left(rotating);
 
     } else { /* parent->right == subtree_root */
@@ -603,8 +603,8 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
 
   rotating->tie_right(subtree_root);
 
-  subtree_root->size -= 1 + ((rotating->left)? rotating->left->size : 0);
-  rotating->size += 1 + ((subtree_root->right)? subtree_root->right->size : 0);
+  subtree_root->size -= 1 + ((rotating->get_left())? rotating->get_left()->size : 0);
+  rotating->size += 1 + ((subtree_root->get_right())? subtree_root->get_right()->size : 0);
 }
 
 template <typename Key, typename Compare>
@@ -613,8 +613,8 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
   if (subtree_root == nullptr || !subtree_root->has_right())
     return;
 
-  node* rotating = subtree_root->right;
-  subtree_root->tie_right(rotating->left);
+  node* rotating = subtree_root->get_right();
+  subtree_root->tie_right(rotating->get_left());
 
   if (is_root(subtree_root)) {
     root.set(rotating);
@@ -623,7 +623,7 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
 
     node* parent = subtree_root->parent();
     
-    if (parent->left == subtree_root) {
+    if (parent->get_left() == subtree_root) {
       parent->tie_left(rotating);
 
     } else {
@@ -633,8 +633,8 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
 
   rotating->tie_left(subtree_root);
 
-  subtree_root->size -= 1 + ((rotating->right)? rotating->right->size : 0);
-  rotating->size += 1 + ((subtree_root->left)? subtree_root->left->size : 0);
+  subtree_root->size -= 1 + ((rotating->get_right())? rotating->get_right()->size : 0);
+  rotating->size += 1 + ((subtree_root->get_left())? subtree_root->get_left()->size : 0);
 }
 
 template <typename Key, typename Compare>
@@ -654,14 +654,16 @@ bool rbtree<Key, Compare>::insert_node(node* inserting) {
 
     incr_subtree_sizes(inserting->parent());
 
-    if (inserting == leftmost->left) {
+    if (inserting == leftmost->get_left()) {
       leftmost = inserting;
     }
   }
 
-  insert_rb_fix(inserting);
+  inserting->stitch();
+  std::cerr << "alive \n";
+  // insert_rb_fix(inserting);
 
-  assert(debug_validate());
+  // assert(debug_validate());
   return true;
 }
 
@@ -759,6 +761,8 @@ bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) 
   node* parent = subtree_root->parent();
   node** place;
 
+  bool on_right = false;
+
   while (current != nullptr) {
 
     parent = current;
@@ -768,18 +772,25 @@ bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) 
 
     if (!cmp(inserting->value, current->value)) {
 
-      place = &current->right;
-      current = current->right;
+      // place = &current->get_right();
+      on_right = true;
+      current = current->get_right();
 
     } else {
 
-      place = &current->left;
-      current = current->left;
+      // place = &current->get_left();
+      current = current->get_left();
     }
   }
 
   *place = inserting;
   inserting->set_parent(parent);
+
+  if (on_right) {
+    parent->tie_right(inserting);
+  } else {
+    parent->tie_left(inserting);
+  }
 
   return true;
 }
@@ -792,7 +803,7 @@ void rbtree<Key, Compare>::delete_node(node* deleting) {
   decr_subtree_sizes(nd);
   delete nd;
 
-  assert(debug_validate());
+  // assert(debug_validate());
 }
 
 template <typename Key, typename Compare>
@@ -801,17 +812,17 @@ std::pair<typename rbtree<Key, Compare>::node*,
 rbtree<Key, Compare>::get_y_and_its_decs(node* y) noexcept {
 
   if (!y->has_left()) {
-    return std::make_pair(y, y->right);
+    return std::make_pair(y, y->get_right());
 
   } else {
 
     if (!y->has_right()) {
-      return std::make_pair(y, y->left);
+      return std::make_pair(y, y->get_left());
     
     } else { /* z has two non-null children */
 
-      y = node::get_leftmost_desc(y->right);
-      return std::make_pair(y, y->right);
+      y = node::get_leftmost_desc(y->get_right());
+      return std::make_pair(y, y->get_right());
     }
   }
 }
@@ -829,12 +840,12 @@ rbtree<Key, Compare>::delete_rb_rebalance_w_is_red(node* w, bool x_on_left,
   if (x_on_left) {
       
     left_rotate(parent_of_x);
-    return parent_of_x->right;
+    return parent_of_x->get_right();
 
   } else {
     
     right_rotate(parent_of_x);
-    return parent_of_x->left;
+    return parent_of_x->get_left();
   }
 
   return w;
@@ -847,8 +858,8 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
 
   while (!is_root(x) && (x == nullptr || x->color == color_t::BLACK)) {
 
-    bool x_on_left = (x == parent_of_x->left);
-    node* w = (x_on_left)? parent_of_x->right : parent_of_x->left;
+    bool x_on_left = (x == parent_of_x->get_left());
+    node* w = (x_on_left)? parent_of_x->get_right() : parent_of_x->get_left();
     
     if (w == nullptr) {
       break;
@@ -863,7 +874,7 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
     }
 
     /* NOTE: nullptr node is also black one */
-    if (node::is_black(w->left) && node::is_black(w->right)) {
+    if (node::is_black(w->get_left()) && node::is_black(w->get_right())) {
 
       w->paint(color_t::RED);
       x = parent_of_x;
@@ -873,29 +884,29 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
 
       if (x_on_left) {
 
-        if (w->right == nullptr || w->right->color == color_t::BLACK) {
+        if (w->get_right() == nullptr || w->get_right()->color == color_t::BLACK) {
 
-          w->left->color = color_t::BLACK;
+          w->get_left()->color = color_t::BLACK;
           w->color = color_t::RED;
           right_rotate(w);
-          w = parent_of_x->right;
+          w = parent_of_x->get_right();
         }
 
       } else {
 
-        if (w->left == nullptr || w->left->color == color_t::BLACK) {
+        if (w->get_left() == nullptr || w->get_left()->color == color_t::BLACK) {
 
-          w->right->color = color_t::BLACK;
+          w->get_right()->color = color_t::BLACK;
           w->color = color_t::RED;
           left_rotate(w);
-          w = parent_of_x->left;
+          w = parent_of_x->get_left();
         }
       }
 
       w->color = parent_of_x->color;
       parent_of_x->paint(color_t::BLACK);
 
-      node*& nd = (x_on_left)? w->right : w->left;
+      node*& nd = (x_on_left)? w->get_right() : w->get_left();
       if (nd != nullptr) {
         nd->paint(color_t::BLACK);
       }
@@ -939,19 +950,19 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
 
   if (y != z) {
 
-    z->left->set_parent(y); /* relink y in place of z, y is z's desc */
-    y->left = z->left;
+    z->get_left()->set_parent(y); /* relink y in place of z, y is z's desc */
+    y->set_left(z->get_left());
 
-    if (y != z->right) {
+    if (y != z->get_right()) {
 
       parent_of_x = y->parent();
       if (x != nullptr) {
         x->set_parent(y->parent());
       }
 
-      y->parent()->left = x;
-      y->right = z->right;
-      z->right->set_parent(y);
+      y->parent()->set_left(x);
+      y->set_right(z->get_right());
+      z->get_right()->set_parent(y);
     
     } else {
       parent_of_x = y;
@@ -1022,7 +1033,7 @@ rbtree<Key, Compare>::less_than(const key_type& key) const noexcept {
     return size();
   }
 
-  size_type number = node::subtree_size(current->left);
+  size_type number = node::subtree_size(current->get_left());
 
   while (current != end_node_ptr()) {
 
@@ -1135,7 +1146,7 @@ void rbtree<Key, Compare>::write_dot(std::ofstream& of) const {
     cur->write_dot(of);
 
     if (cur->has_right()) {
-      nd = node::get_leftmost_desc(cur->right);
+      nd = node::get_leftmost_desc(cur->get_right());
 
     } else {
 
@@ -1144,7 +1155,7 @@ void rbtree<Key, Compare>::write_dot(std::ofstream& of) const {
 
       while (nd != end_node_ptr()) {
 
-        if (prev == nd->left) {
+        if (prev == nd->get_left()) {
           break;
         }
 

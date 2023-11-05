@@ -19,12 +19,18 @@ namespace DETAIL {
 
 /* Node structure representing end node. */
 template <typename Node>
-struct end_node_t {
+class end_node_t {
+
+public:
 
   using node_t = Node;
 
+protected:
+
   bool left_is_thread = false;
   node_t* left = nullptr;
+
+public:
 
   end_node_t(node_t* lft = nullptr) noexcept:
   left(lft) {};
@@ -43,6 +49,14 @@ struct end_node_t {
   }
 
   virtual ~end_node_t() {};
+
+  node_t* get_left() const noexcept { 
+    return (left_is_thread)? nullptr : left; 
+  }
+
+  void set_left(node_t* nd) noexcept {
+    left = nd;
+  }
 
   node_t* tie_left(node_t* child) noexcept {
 
@@ -68,7 +82,9 @@ struct end_node_t {
     return prev;
   }
 
-  bool has_left() const noexcept { return (left != nullptr); }
+  bool has_left() const noexcept { 
+    return (!left_is_thread) && (left != nullptr); 
+  }
 };
 
 /* Node structure used in searching tree. */
@@ -95,10 +111,13 @@ public:
   /* Subtree size. */
   size_type size = 1;
 
+private:
+
+  using end_node::left_is_thread;
+  using end_node::left;
+
   bool right_is_thread = false;
   node_t* right = nullptr;
-
-private:
 
   end_node* parent_ = nullptr;
 
@@ -145,8 +164,15 @@ public:
   noexcept(std::is_nothrow_move_constructible_v<key_type>)
   : value(std::move(key)) {}
 
-  using end_node::left_is_thread;
-  using end_node::left;
+  using end_node::get_left;
+  node_t* get_right() const { 
+    return (right_is_thread)? nullptr : right; 
+  }
+
+  using end_node::set_left;
+  void set_right(node_t* nd) noexcept {
+    right = nd;
+  }
 
   /* Get parent node as end_node pointer or node_t pointer. */
   end_node* parent_as_end() const { return parent_; }
@@ -158,7 +184,9 @@ public:
   bool is_leaf() const noexcept { return ((left == nullptr) && (right == nullptr));}
 
   using end_node::has_left;
-  bool has_right() const noexcept { return (right != nullptr); }
+  bool has_right() const noexcept { 
+    return (!right_is_thread) && (right != nullptr);
+  }
 
   bool is_red() const noexcept { return (color == color::RED); }
   bool is_black() const noexcept { return (color == color::BLACK); }
@@ -198,7 +226,7 @@ public:
   using end_node::stitch_left;
   node_t* stitch_right(node_t* nd) noexcept {
 
-    node_t* prev = left;
+    node_t* prev = right;
 
     right_is_thread = true;
     right = nd;
@@ -207,15 +235,15 @@ public:
   }
 
   bool on_left() const noexcept {
-    return (parent_ == nullptr)? false : this == parent_->left;
+    return (parent_ == nullptr)? false : this == parent_->get_left();
   }
 
   bool on_right() const noexcept {
-    return (parent_ == nullptr)? false : this == parent()->right;
+    return (parent_ == nullptr)? false : this == parent()->get_right();
   }
 
   node_t* sibling() const noexcept {
-    return (parent_ == nullptr)? nullptr : (on_left())? parent()->right : parent_->left;
+    return (parent_ == nullptr)? nullptr : (on_left())? parent()->get_right() : parent_->get_left();
   }
 
   node_t* uncle() const noexcept {
@@ -232,11 +260,13 @@ public:
     return (subtree_root != nullptr)? subtree_root->size : 0;
   }
 
-  static const node_t* get_prev(const node_t* node_ptr) noexcept;
-  static node_t* get_prev(node_t* node_ptr) noexcept;
+  const node_t* get_prev() const noexcept;
+  node_t* get_prev() noexcept;
 
-  static const node_t* get_next(const node_t* node_ptr) noexcept;
-  static node_t* get_next(node_t* node_ptr) noexcept;
+  const node_t* get_next() const noexcept;
+  node_t* get_next() noexcept;
+
+  void stitch() noexcept;
 
   /* Validate node - checks its rRB-properties. */
   bool debug_validate() const;
@@ -252,7 +282,7 @@ template <typename Key>
 node_t<Key>* node_t<Key>::get_leftmost_desc(node_t* cur) noexcept {
 
   while (cur != nullptr && cur->has_left()) {
-    cur = cur->left;
+    cur = cur->get_left();
   }
 
   return cur;
@@ -262,7 +292,7 @@ template <typename Key>
 const node_t<Key>* node_t<Key>::get_leftmost_desc(const node_t* cur) noexcept {
 
   while (cur != nullptr && cur->has_left()) {
-    cur = cur->left;
+    cur = cur->get_left();
   }
 
   return cur;
@@ -272,7 +302,7 @@ template <typename Key>
 node_t<Key>* node_t<Key>::get_rightmost_desc(node_t* cur) noexcept {
 
   while (cur != nullptr && cur->has_right()) {
-    cur = cur->right;
+    cur = cur->get_right();
   }
 
   return cur;
@@ -282,22 +312,22 @@ template <typename Key>
 const node_t<Key>* node_t<Key>::get_rightmost_desc(const node_t* cur) noexcept {
 
   while (cur != nullptr && cur->has_right()) {
-    cur = cur->right;
+    cur = cur->get_right();
   }
 
   return cur;
 }
 
 template <typename Key>
-const node_t<Key>* node_t<Key>::get_prev(const node_t* node_ptr) noexcept {
+const node_t<Key>* node_t<Key>::get_prev() const noexcept {
 
-  if (node_ptr->has_left()) {
-    return node_t::get_rightmost_desc(node_ptr->left);
+  if (has_left()) {
+    return node_t::get_rightmost_desc(left);
 
   } else {
 
-    const node_t* prev = node_ptr;
-    node_ptr = node_ptr->parent();
+    const node_t* prev = this;
+    const node_t* node_ptr = parent();
 
     while (node_ptr->parent() != nullptr) {
 
@@ -314,15 +344,15 @@ const node_t<Key>* node_t<Key>::get_prev(const node_t* node_ptr) noexcept {
 }
 
 template <typename Key>
-node_t<Key>* node_t<Key>::get_prev(node_t* node_ptr) noexcept {
+node_t<Key>* node_t<Key>::get_prev() noexcept {
 
-  if (node_ptr->has_left()) {
-    return node_t::get_rightmost_desc(node_ptr->left);
+  if (has_left()) {
+    return node_t::get_rightmost_desc(left);
 
   } else {
 
-    node_t* prev = node_ptr;
-    node_ptr = node_ptr->parent();
+    node_t* prev = this;
+    node_t* node_ptr = parent();
 
     while (node_ptr->parent() != nullptr) {
 
@@ -339,15 +369,15 @@ node_t<Key>* node_t<Key>::get_prev(node_t* node_ptr) noexcept {
 }
 
 template <typename Key>
-const node_t<Key>* node_t<Key>::get_next(const node_t* node_ptr) noexcept {
+const node_t<Key>* node_t<Key>::get_next() const noexcept {
 
-  if (node_ptr->has_right()) {
-    return node_t::get_leftmost_desc(node_ptr->right);
+  if (has_right()) {
+    return node_t::get_leftmost_desc(right);
 
   } else {
 
-    const node_t* prev = node_ptr;
-    node_ptr = node_ptr->parent();
+    const node_t* prev = this;
+    const node_t* node_ptr = parent();
 
     while (node_ptr->parent() != nullptr) {
 
@@ -364,15 +394,15 @@ const node_t<Key>* node_t<Key>::get_next(const node_t* node_ptr) noexcept {
 }
 
 template <typename Key>
-node_t<Key>* node_t<Key>::get_next(node_t* node_ptr) noexcept {
+node_t<Key>* node_t<Key>::get_next() noexcept {
 
-  if (node_ptr->has_right()) {
-    return node_t::get_leftmost_desc(node_ptr->right);
+  if (has_right()) {
+    return node_t::get_leftmost_desc(right);
 
   } else {
 
-    node_t* prev = node_ptr;
-    node_ptr = node_ptr->parent();
+    node_t* prev = this;
+    node_t* node_ptr = parent();
 
     while (node_ptr->parent() != nullptr) {
 
@@ -387,6 +417,19 @@ node_t<Key>* node_t<Key>::get_next(node_t* node_ptr) noexcept {
     return node_ptr;
   }
 }
+
+template <typename Key>
+void node_t<Key>::stitch() noexcept {
+
+  if (!has_left()) {
+    stitch_left(get_prev());
+  }
+
+  if (!has_right()) {
+    stitch_right(get_next());
+  } 
+}
+
 
 template <typename Key>
 bool node_t<Key>::debug_validate() const {
@@ -453,8 +496,8 @@ public:
     end.tie_left(root);
   }
   
-  const node* get() const noexcept { return end.left; }
-  node* get() noexcept { return end.left; }
+  const node* get() const noexcept { return end.get_left(); }
+  node* get() noexcept { return end.get_left(); }
 
   const end_node* end_node_ptr() const { return std::addressof(end); }
   end_node* end_node_ptr() { return std::addressof(end); }

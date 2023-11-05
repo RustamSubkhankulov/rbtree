@@ -67,7 +67,7 @@ template <typename Node>
 const_iter<Node>& const_iter<Node>::operator++() noexcept { 
 
   if (static_cast<const node*>(node_ptr_)->has_right()) {
-    node_ptr_ = node::get_leftmost_desc(static_cast<const node*>(node_ptr_)->right);
+    node_ptr_ = node::get_leftmost_desc(static_cast<const node*>(node_ptr_)->get_right());
 
   } else {
 
@@ -76,7 +76,7 @@ const_iter<Node>& const_iter<Node>::operator++() noexcept {
 
     while (static_cast<const node*>(node_ptr_)->parent_as_end() != nullptr) {
 
-      if (prev == node_ptr_->left) {
+      if (prev == node_ptr_->get_left()) {
         break;
       }
 
@@ -92,7 +92,7 @@ template <typename Node>
 const_iter<Node>& const_iter<Node>::operator--() noexcept { 
   
   if (node_ptr_->has_left()) {
-    node_ptr_ = node::get_rightmost_desc(node_ptr_->left);
+    node_ptr_ = node::get_rightmost_desc(node_ptr_->get_left());
 
   } else {
 
