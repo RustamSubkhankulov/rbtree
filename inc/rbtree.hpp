@@ -584,7 +584,6 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
     return;
 
   node* rotating = subtree_root->get_left();
-  subtree_root->tie_left(rotating->get_right());
 
   if (is_root(subtree_root)) {
     root.set(rotating);
@@ -601,6 +600,15 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
     }
   }
 
+  auto right = rotating->get_right_unsafe();
+
+  if (rotating->is_thread_right()) {
+    subtree_root->stitch_left(subtree_root->get_prev(end_node_ptr()));
+  } else {
+    subtree_root->tie_left(right);
+  }
+
+  // subtree_root->tie_left(rotating->get_right());
   rotating->tie_right(subtree_root);
 
   subtree_root->size -= 1 + ((rotating->get_left())? rotating->get_left()->size : 0);
@@ -614,7 +622,6 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
     return;
 
   node* rotating = subtree_root->get_right();
-  subtree_root->tie_right(rotating->get_left());
 
   if (is_root(subtree_root)) {
     root.set(rotating);
@@ -631,6 +638,15 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
     }
   }
 
+  auto left = rotating->get_left_unsafe();
+
+  if (rotating->is_thread_left()) {
+    subtree_root->stitch_right(subtree_root->get_next(end_node_ptr()));
+  } else {
+    subtree_root->tie_right(left);
+  }
+
+  // subtree_root->tie_right(rotating->get_left());
   rotating->tie_left(subtree_root);
 
   subtree_root->size -= 1 + ((rotating->get_right())? rotating->get_right()->size : 0);
@@ -659,9 +675,8 @@ bool rbtree<Key, Compare>::insert_node(node* inserting) {
     }
   }
 
-  inserting->stitch();
-  std::cerr << "alive \n";
-  // insert_rb_fix(inserting);
+  inserting->stitch(end_node_ptr());
+  insert_rb_fix(inserting);
 
   // assert(debug_validate());
   return true;
@@ -759,7 +774,6 @@ bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) 
 
   node* current = subtree_root;
   node* parent = subtree_root->parent();
-  node** place;
 
   bool on_right = false;
 
@@ -772,18 +786,15 @@ bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) 
 
     if (!cmp(inserting->value, current->value)) {
 
-      // place = &current->get_right();
       on_right = true;
       current = current->get_right();
 
     } else {
 
-      // place = &current->get_left();
       current = current->get_left();
     }
   }
 
-  *place = inserting;
   inserting->set_parent(parent);
 
   if (on_right) {
