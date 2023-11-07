@@ -602,13 +602,12 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
 
   auto right = rotating->get_right_unsafe();
 
-  if (rotating->is_thread_right()) {
-    subtree_root->stitch_left(subtree_root->get_prev(end_node_ptr()));
-  } else {
+  if (rotating->has_right()) {
     subtree_root->tie_left(right);
+  } else {
+    subtree_root->stitch_left(subtree_root->get_prev(end_node_ptr()));
   }
 
-  // subtree_root->tie_left(rotating->get_right());
   rotating->tie_right(subtree_root);
 
   subtree_root->size -= 1 + ((rotating->get_left())? rotating->get_left()->size : 0);
@@ -640,13 +639,12 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
 
   auto left = rotating->get_left_unsafe();
 
-  if (rotating->is_thread_left()) {
-    subtree_root->stitch_right(subtree_root->get_next(end_node_ptr()));
-  } else {
+  if (rotating->has_left()) {
     subtree_root->tie_right(left);
+  } else {
+    subtree_root->stitch_right(subtree_root->get_next(end_node_ptr()));
   }
 
-  // subtree_root->tie_right(rotating->get_left());
   rotating->tie_left(subtree_root);
 
   subtree_root->size -= 1 + ((rotating->get_right())? rotating->get_right()->size : 0);
@@ -791,6 +789,7 @@ bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) 
 
     } else {
 
+      on_right = false;
       current = current->get_left();
     }
   }
@@ -917,7 +916,7 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
       w->color = parent_of_x->color;
       parent_of_x->paint(color_t::BLACK);
 
-      node*& nd = (x_on_left)? w->get_right() : w->get_left();
+      node* nd = (x_on_left)? w->get_right() : w->get_left();
       if (nd != nullptr) {
         nd->paint(color_t::BLACK);
       }
@@ -962,7 +961,14 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
   if (y != z) {
 
     z->get_left()->set_parent(y); /* relink y in place of z, y is z's desc */
-    y->set_left(z->get_left());
+    
+    auto z_left = z->get_left_unsafe();
+    
+    if (z->has_left()) {
+      y->tie_left(z_left);
+    } else {
+      y->stitch_left(y->get_prev(end_node_ptr()));
+    }
 
     if (y != z->get_right()) {
 
@@ -993,17 +999,25 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
     }
 
     transplant(z, x);
+    parent_of_x->stitch(end_node_ptr());
 
     if (leftmost == z) {
       delete_rb_update_leftmost(z, x);
     }
   }
 
+  auto prev = z->get_prev(end_node_ptr());
+  if (prev != static_cast<node*>(end_node_ptr()) && !prev->has_right()) {
+
+    auto next = (y != z)? y : x;
+    prev->stitch_right((next)? next : prev->get_next(end_node_ptr()));
+  }
+
   if (y->is_black()) {
     delete_rb_rebalance(x, parent_of_x);
   }
 
-  return y;
+  return z;
 }
 
 template <typename Key, typename Compare>

@@ -527,7 +527,7 @@ public:
 
   root& operator=(root&& that) noexcept {
     
-    end.tie_left(that.end.tie_left(end.left));
+    end.tie_left(that.end.tie_left(end.get_left()));
     return *this;
   }
 

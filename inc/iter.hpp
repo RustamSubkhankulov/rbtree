@@ -101,7 +101,7 @@ const_iter<Node>& const_iter<Node>::operator--() noexcept {
 
     while (static_cast<const node*>(node_ptr_)->parent_as_end() != nullptr) {
 
-      if (prev == static_cast<const node*>(node_ptr_)->right) {
+      if (prev == static_cast<const node*>(node_ptr_)->get_right()) {
         break;
       }
 
