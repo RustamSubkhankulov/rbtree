@@ -302,14 +302,19 @@ public:
 
   void stitch() noexcept;
 
-  /* Validate node - checks its rRB-properties. */
-  bool debug_validate() const;
+  /* Validate node. Call function below. */
+  bool debug_validate() const noexcept;
+  
+  /* Checks red-black tree properties of node. */
+  bool debug_validate_rb() const noexcept;
+
+  /* Checks subtree sizes of tree. */
+  bool debug_validate_size() const noexcept;
 
   /* Helper functions used for graphical dump of the tree. */
   void write_dot(std::ofstream& of) const;
   static void write_nill_dot(std::ofstream& of, uintptr_t node_num);
   static void write_pastend_dot(std::ofstream& of, uintptr_t node_num);
-
 };
 
 template <typename Key>
@@ -476,35 +481,79 @@ void node_t<Key>::stitch() noexcept {
   } 
 }
 
+template <typename Key>
+bool node_t<Key>::debug_validate_rb() const noexcept {
+
+  if (is_black()) {
+    return true;
+  }
+
+  bool res = true;
+
+  if (has_left() && left->color != color::BLACK) {
+
+    std::cerr << "Debug validation:"
+              << " left descendant " << left 
+              << " of a red node " << this
+              << " is not black. \n";
+    res = false;
+  }
+
+  if (has_right() && right->color != color::BLACK) {
+    
+    std::cerr << "Debug validation:"
+              << " right descendant " << right
+              << " of a red node " << this
+              << " is not black."
+              << std::endl;
+    res = false;
+  }
+
+  return res;
+}
 
 template <typename Key>
-bool node_t<Key>::debug_validate() const {
+bool node_t<Key>::debug_validate_size() const noexcept {
 
-  if (has_left()) {
+  size_t sz = 0;
 
-    if (color == color::RED && left->color != color::BLACK) {
-
-      std::cerr << "Debug validation: descendant of a red node is not black. \n";
-      return false;
-    }
-
-    if (!left->debug_validate())
-      return false;
+  bool has_l = has_left();
+  if (has_l) {
+    sz += left->size;
   }
 
-  if (has_right()) {
+  bool has_r = has_right();
+  if (has_r) {
+    sz += right->size;
+  }
 
-    if (color == color::RED && right->color != color::BLACK) {
+  if (sz + 1 != size) {
+    std::cerr << "Debug validation: invalid subtree sizes." 
+              << " Size of node " << this << " is " << size;
       
-      std::cerr << "Debug validation: descendant of a red node is not black. \n";
-      return false;
+    if (has_l) {
+      std::cerr << " Size of left descendant " << left 
+                << " is " << left->size;
     }
 
-    if (!right->debug_validate())
-      return false;
-  }
+    if (has_r) {
+      std::cerr << " Size of right descendant " << right 
+                << " is " << right->size;
+    }
+
+    std::cerr << std::endl;
+  } 
 
   return true;
+}
+
+template <typename Key>
+bool node_t<Key>::debug_validate() const noexcept {
+
+  auto rb_res   = debug_validate_rb();
+  auto size_res = debug_validate_size();
+
+  return (rb_res && size_res);
 }
 
 template <typename Node>

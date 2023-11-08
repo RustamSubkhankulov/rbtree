@@ -712,7 +712,7 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
 
     node* parent = subtree_root->parent();
     
-    if (parent->get_left() == subtree_root) {
+    if (subtree_root->on_left()) {
       parent->tie_left(rotating);
 
     } else { /* parent->right == subtree_root */
@@ -749,7 +749,7 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
 
     node* parent = subtree_root->parent();
     
-    if (parent->get_left() == subtree_root) {
+    if (subtree_root->on_left()) {
       parent->tie_left(rotating);
 
     } else {
@@ -767,8 +767,8 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
 
   rotating->tie_left(subtree_root);
 
-  subtree_root->size -= 1 + ((rotating->get_right())? rotating->get_right()->size : 0);
-  rotating->size += 1 + ((subtree_root->get_left())? subtree_root->get_left()->size : 0);
+  subtree_root->size -= 1 + ((rotating->has_right())? rotating->get_right_unsafe()->size : 0);
+  rotating->size += 1 + ((subtree_root->has_left())? subtree_root->get_left_unsafe()->size : 0);
 }
 
 template <typename Key, typename Compare>
@@ -994,8 +994,10 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
 
   while (!is_root(x) && (x == nullptr || x->color == color_t::BLACK)) {
 
-    bool x_on_left = (x == parent_of_x->get_left());
-    node* w = (x_on_left)? parent_of_x->get_right() : parent_of_x->get_left();
+    auto parent_of_x_l = parent_of_x->get_left();
+
+    bool x_on_left = (x == parent_of_x_l);
+    node* w = (x_on_left)? parent_of_x->get_right() : parent_of_x_l;
     
     if (w == nullptr) {
       break;
@@ -1020,7 +1022,8 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
 
       if (x_on_left) {
 
-        if (w->get_right() == nullptr || w->get_right()->color == color_t::BLACK) {
+        auto w_r = w->get_right();
+        if (w_r == nullptr || w_r->color == color_t::BLACK) {
 
           w->get_left()->color = color_t::BLACK;
           w->color = color_t::RED;
@@ -1030,7 +1033,8 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
 
       } else {
 
-        if (w->get_left() == nullptr || w->get_left()->color == color_t::BLACK) {
+        auto w_l = w->get_left();
+        if (w_l == nullptr || w_l->color == color_t::BLACK) {
 
           w->get_right()->color = color_t::BLACK;
           w->color = color_t::RED;
@@ -1054,10 +1058,10 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
       }
       break;
     }
+  }
 
-    if (x != nullptr) {
-      x->color = color_t::BLACK;
-    }
+  if (x != nullptr) {
+    x->color = color_t::BLACK;
   }
 }
 
@@ -1135,17 +1139,12 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
 
   if (y != z) {
 
-    z->get_left()->set_parent(y); /* relink y in place of z, y is z's desc */
-    
     auto z_left = z->get_left_unsafe();
+    z_left->set_parent(y); /* relink y in place of z, y is z's desc */
+    y->set_left(z_left);
     
-    if (z->has_left()) {
-      y->tie_left(z_left);
-    } else {
-      y->stitch_left(y->get_prev());
-    }
-
-    if (y != z->get_right()) {
+    auto z_right = z->get_right();
+    if (y != z_right) {
 
       parent_of_x = y->parent();
       if (x != nullptr) {
@@ -1153,8 +1152,8 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
       }
 
       y->parent()->set_left(x);
-      y->set_right(z->get_right());
-      z->get_right()->set_parent(y);
+      y->set_right(z_right);
+      z_right->set_parent(y);
     
     } else {
       parent_of_x = y;
@@ -1267,8 +1266,12 @@ bool rbtree<Key, Compare>::debug_validate() const noexcept {
     res = false;
   }
 
-  if (!root_node->debug_validate()) {
-    res = false;
+  for (auto it = cbegin(), end_it = cend(); it != end_it; ++it) {
+
+    auto nd = static_cast<const node*>(it.node_ptr_);
+    if (!nd->debug_validate()) {
+      res = false;
+    }
   }
 
   if (!res) {
@@ -1342,29 +1345,9 @@ void rbtree<Key, Compare>::write_dot(std::ofstream& of) const {
        << " label = \"L\" ]; \n";
   }
 
-  for (const end_node* nd = node::get_leftmost_desc(root.get()); nd != end_node_ptr();) {
+  for (auto it = cbegin(), end_it = cend(); it != end_it; ++it) {
 
-    auto cur = static_cast<const node*>(nd);
-    cur->write_dot(of);
-
-    if (cur->has_right()) {
-      nd = node::get_leftmost_desc(cur->get_right());
-
-    } else {
-
-      const node* prev = cur;
-      nd = cur->parent();
-
-      while (nd != end_node_ptr()) {
-
-        if (prev == nd->get_left()) {
-          break;
-        }
-
-        prev = static_cast<const node*>(nd);
-        nd = prev->parent();  
-      }
-    }
+    static_cast<const node*>(it.xnode_ptr_)->write_dot(of);
   }
 }
 
