@@ -58,7 +58,19 @@ namespace {
 int main() {
 
   /* Construct empty tree - RBTREE::rbtree. */
-  RBTREE:rbtree<int> set;
+  #if defined(STDSET)
+    std::cerr << "std::set \n";
+    std::set<int> set;
+  #else 
+    std::cerr << "RBTREE::rbtree \n";
+    RBTREE:rbtree<int> set;
+  #endif 
+
+  #if defined(STDDIST)
+    std::cerr << "std::distance() \n";
+  #else 
+    std::cerr << "RBTREE::rbtree::distance() \n";
+  #endif
 
   /* Read sequence of queries. */
   query_seq q_seq;

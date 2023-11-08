@@ -22,7 +22,13 @@ void query_k_insert(RBTREE::rbtree<Key>& rbtree, const Key& key) {
   rbtree.insert(key);
 }
 
-/* q-query implementation using std::distance() method for RBTREE::rbtree. */
+/* k-query implementation for std::set. */
+template <typename Key>
+void query_k_insert(std::set<int>& set, const Key& key) {
+  set.insert(key);
+}
+
+/* q-query implementation using std::distance() for RBTREE::rbtree. */
 template <typename Key>
 typename RBTREE::rbtree<Key>::difference_type 
 query_q_distance(RBTREE::rbtree<Key>& rbtree, const Key& first, const Key& second) {
@@ -34,6 +40,22 @@ template <typename Key>
 typename RBTREE::rbtree<Key>::difference_type 
 query_q_distance(RBTREE::rbtree<Key>& rbtree, typename RBTREE::rbtree<Key>::const_iterator first, 
                                               typename RBTREE::rbtree<Key>::const_iterator second) {
+
+  return std::distance(first, second);
+}
+
+/* q-query implementation using std::distance() for std::set. */
+template <typename Key>
+typename RBTREE::rbtree<Key>::difference_type 
+query_q_distance(std::set<int>& set, const Key& first, const Key& second) {
+
+  return std::distance(set.find(first), set.find(second));
+}
+
+template <typename Key>
+typename RBTREE::rbtree<Key>::difference_type 
+query_q_distance(std::set<int>& set, typename std::set<int>::const_iterator first,
+                                     typename std::set<int>::const_iterator second) {
 
   return std::distance(first, second);
 }

@@ -1,2 +1,3 @@
 #cmakedefine STDDIST @STDDIST@
+#cmakedefine STDSET @STDSET@
 #cmakedefine MEASURE_TIME @MEASURE_TIME@

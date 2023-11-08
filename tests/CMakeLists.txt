@@ -17,7 +17,12 @@ TEST_TARGET(query)
 TEST_TARGET(unit)
 
 option(STDDIST "Use std::disnatce instead of RBTREE::rbtree::distance() in interactive test" OFF)
+option(STDSET "Use std::set instead of RBTREE::rbtree in interactive test" OFF)
 option(MEASURE_TIME "Measure time in interactive test" OFF)
+
+if ((STDSET) AND (NOT (STDDIST)))
+  message(FATAL_ERROR "STDSET is not supported with STDDIST=OFF in interactive test.")
+endif()
 
 configure_file(${CNF}/interactive_conf.hpp.in interactive_conf.hpp @ONLY)
 target_include_directories(interactive PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
