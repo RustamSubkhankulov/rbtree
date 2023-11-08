@@ -82,12 +82,12 @@ public:
     return prev;
   }
 
-  node_t* stitch_left(node_t* nd) noexcept {
+  node_t* stitch_left(end_node_t* nd) noexcept {
 
     node_t* prev = left;
 
     left_is_thread = true;
-    left = nd;
+    left = static_cast<node_t*>(nd);
     
     return prev;
   }
@@ -258,12 +258,12 @@ public:
   }
 
   using end_node::stitch_left;
-  node_t* stitch_right(node_t* nd) noexcept {
+  node_t* stitch_right(end_node* nd) noexcept {
 
     node_t* prev = right;
 
     right_is_thread = true;
-    right = nd;
+    right = static_cast<node_t*>(nd);
     
     return prev;
   }
@@ -294,11 +294,11 @@ public:
     return (subtree_root != nullptr)? subtree_root->size : 0;
   }
 
-  const node_t* get_prev() const noexcept;
-  node_t* get_prev() noexcept;
+  const end_node* get_prev() const noexcept;
+  end_node* get_prev() noexcept;
 
-  const node_t* get_next() const noexcept;
-  node_t* get_next() noexcept;
+  const end_node* get_next() const noexcept;
+  end_node* get_next() noexcept;
 
   void stitch() noexcept;
 
@@ -353,7 +353,8 @@ const node_t<Key>* node_t<Key>::get_rightmost_desc(const node_t* cur) noexcept {
 }
 
 template <typename Key>
-const node_t<Key>* node_t<Key>::get_prev() const noexcept {
+const typename node_t<Key>::end_node* 
+node_t<Key>::get_prev() const noexcept {
 
   if (has_left()) {
     return node_t::get_rightmost_desc(left);
@@ -375,12 +376,13 @@ const node_t<Key>* node_t<Key>::get_prev() const noexcept {
       node_ptr = nd->parent();  
     }
 
-    return static_cast<const node_t*>(node_ptr);
+    return node_ptr;
   }
 }
 
 template <typename Key>
-node_t<Key>* node_t<Key>::get_prev() noexcept {
+typename node_t<Key>::end_node* 
+node_t<Key>::get_prev() noexcept {
 
   if (has_left()) {
     return node_t::get_rightmost_desc(left);
@@ -402,12 +404,13 @@ node_t<Key>* node_t<Key>::get_prev() noexcept {
       node_ptr = nd->parent();  
     }
 
-    return static_cast<node_t*>(node_ptr);
+    return node_ptr;
   }
 }
 
 template <typename Key>
-const node_t<Key>* node_t<Key>::get_next() const noexcept {
+const typename node_t<Key>::end_node* 
+node_t<Key>::get_next() const noexcept {
 
   if (has_right()) {
     return node_t::get_leftmost_desc(right);
@@ -429,12 +432,13 @@ const node_t<Key>* node_t<Key>::get_next() const noexcept {
       node_ptr = nd->parent();  
     }
 
-    return static_cast<const node_t*>(node_ptr);
+    return node_ptr;
   }
 }
 
 template <typename Key>
-node_t<Key>* node_t<Key>::get_next() noexcept {
+typename node_t<Key>::end_node* 
+node_t<Key>::get_next() noexcept {
 
   if (has_right()) {
     return node_t::get_leftmost_desc(right);
@@ -456,7 +460,7 @@ node_t<Key>* node_t<Key>::get_next() noexcept {
       node_ptr = nd->parent();  
     }
 
-    return static_cast<node_t*>(node_ptr);
+    return node_ptr;
   }
 }
 

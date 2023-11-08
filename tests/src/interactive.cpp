@@ -57,11 +57,6 @@ namespace {
 
 int main() {
 
-  RBTREE::rbtree<int> tree = {1, 2, 3, 4, 5, 6, 7};
-  tree.graph_dump("graph.png");
-  tree.erase(7);
-  tree.graph_dump("graph1.png");
-
   /* Construct empty tree - RBTREE::rbtree. */
   RBTREE:rbtree<int> set;
 

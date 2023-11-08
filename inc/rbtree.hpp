@@ -3,6 +3,7 @@
 #include <ios>
 #include <new>
 #include <stack>
+#include <tuple>
 #include <string>
 #include <cstdio>
 #include <fstream>
@@ -52,7 +53,9 @@ private:
   root_type root;
 
   /* Dynamically updated leftmost node pointer for constant complexity begin(). */
-  const end_node* leftmost = root.end_node_ptr();
+  end_node* leftmost = root.end_node_ptr();
+  /* Dynamically updated rightmost node pointer for constant complexity iter incrementing. */
+  end_node* rightmost = root.end_node_ptr();
 
   /* Comparator. */
   Compare cmp;
@@ -91,9 +94,13 @@ public:
   rbtree(const rbtree& that)
   : cmp(that.cmp) {
 
-    auto [copy_root, copy_leftmost] = that.copy_subtree(that.root.get());
-    root.set(copy_root);
-    leftmost = copy_leftmost;
+    auto copy = that.copy_subtree(that.root.get());
+    
+    root.set(copy.root);
+    leftmost = copy.leftmost;
+    rightmost = copy.rightmost;
+
+    stitch_subtree(root.get());
   }
 
   /* Move ctor. */
@@ -102,7 +109,11 @@ public:
            std::is_nothrow_move_constructible_v<Compare>)
   : root(std::move(that.root)),
     leftmost(std::exchange(that.leftmost, that.root.end_node_ptr())), 
-    cmp(std::move(that.cmp)) {}
+    rightmost(std::exchange(that.rightmost, that.root.end_node_ptr())), 
+    cmp(std::move(that.cmp)) {
+
+    relink_side_nodes(that);
+  }
 
   /* Copy assignment. */
   rbtree& operator=(const rbtree& that) {
@@ -157,7 +168,7 @@ public:
            std::is_nothrow_swappable_v<Compare>) {
 
     std::swap(root, that.root);
-    std::swap(leftmost, that.leftmost);
+    swap_side_nodes(that);
     std::swap(cmp, that.cmp);
   }
 
@@ -177,26 +188,26 @@ public:
    */
 
   /* Iterator to the first element. */
-  const_iterator begin()  const noexcept { return const_iterator(leftmost); }
   const_iterator cbegin() const noexcept { return const_iterator(leftmost); }
+  const_iterator begin()  const noexcept { return cbegin(); }
 
   /* Reverise iterator to the first element. */
-  const_reverse_iterator rbegin()  const noexcept { return const_reverse_iterator(end());  }
   const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
+  const_reverse_iterator rbegin()  const noexcept { return crbegin();  }
 
   /* Past-end iterator. */
-  const_iterator end()  const noexcept { return const_iterator(end_node_ptr()); }
   const_iterator cend() const noexcept { return const_iterator(end_node_ptr()); }
+  const_iterator end()  const noexcept { return cend(); }
 
   /* Reverse past-end iterator. */
-  const_reverse_iterator rend()  const noexcept { return const_reverse_iterator(begin());  }
   const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
+  const_reverse_iterator rend()  const noexcept { return crend();  }
 
   /* Checks whether the container is empty */
   bool empty() const noexcept { return (root.get() == nullptr); }
   /* Returns the number of elements */
   size_type size() const noexcept { 
-    return (root.get() == nullptr)? 0 : root.get()->size; 
+    return (empty())? 0 : root.get()->size; 
   }
 
   /* Clear contents of the tree. */
@@ -242,12 +253,35 @@ public:
 
 private:
 
+  /* Helpers for swapping leftmost and rightmost node pointers. */
+  void swap_side_nodes(rbtree& that) noexcept;
+  void swap_leftmost(rbtree& that) noexcept;
+  void swap_rightmost(rbtree& that) noexcept;
+
+  /* Helpers for processing leftmost and rightmost pointer got from abother tree. */
+  void relink_side_nodes(const rbtree& that) noexcept;
+  void relink_leftmost(const rbtree& that) noexcept;
+  void relink_rightmost(const rbtree& that) noexcept;
+
+  /* Structure holding info about newly made copy of subtree. */
+  struct subtree_copy_t {
+
+    node* root;
+    node* leftmost;
+    node* rightmost;
+  };
+
   /* Make a copy of subtree. */
-  std::pair<node*, node*> copy_subtree(const node* subtree) const;
-  /* Helper for copying. */
-  std::pair<node*, node*> make_subtree_copy(const node* subtree) const;
+  subtree_copy_t copy_subtree(const node* subtree) const;
+  
+  /* Stitch each node in subtree. */
+  void stitch_subtree(node* subtree) const noexcept;
+
   /* Free given subtree. */
   void free_subtree(node* subtree) const noexcept;
+
+  /* Helper for copying. */
+  subtree_copy_t make_subtree_copy(const node* subtree) const;
 
   /* Equivalence relationship deduced from compare function. */
   bool equiv(const key_type& lhs, const key_type& rhs) const {
@@ -279,10 +313,18 @@ private:
 
   /* Fixing functions used on deletion. */
   node* delete_rb_fix(node* erased) noexcept;  
+
+  /* Update stitches on deletion. */
+  void update_stitches(end_node* prev, end_node* next) noexcept;
+  void update_prev(end_node* prev) noexcept;
+  void update_next(end_node* next) noexcept;
+  
+  /* Helper rebalancing functions. */
   std::pair<node*, node*> get_y_and_its_decs(node* y) noexcept;
   void  delete_rb_rebalance(node* x, node* parent_of_x) noexcept;
   node* delete_rb_rebalance_w_is_red(node* w, bool x_on_left, node* parent_of_x) noexcept;
   void  delete_rb_update_leftmost(node* z, node* x) noexcept;
+  void  delete_rb_update_rightmost(node* z, node* x) noexcept;
 
   /* Helper function for finding nodes. */
   const end_node* find_equiv_node(const node* subtree_root, key_type key) const noexcept;
@@ -307,6 +349,56 @@ private:
   static void generate_graph(const std::string& dot_file, 
                              const std::string& graph_name);
 }; 
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::swap_side_nodes(rbtree& that) noexcept {
+
+  swap_leftmost(that);
+  swap_rightmost(that);
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::swap_leftmost(rbtree& that) noexcept {
+
+  std::swap(leftmost, that.leftmost);
+  relink_leftmost(that);
+  that.relink_leftmost(*this);
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::swap_rightmost(rbtree& that) noexcept {
+
+  std::swap(rightmost, that.rightmost);
+  relink_rightmost(that);
+  that.relink_rightmost(*this);
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::relink_side_nodes(const rbtree& that) noexcept {
+
+  relink_leftmost(that);  
+  relink_rightmost(that);  
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::relink_leftmost(const rbtree& that) noexcept {
+
+  if (leftmost == that.end_node_ptr()) {
+    leftmost = end_node_ptr();
+  } else {
+    leftmost->stitch_left(end_node_ptr());
+  }
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::relink_rightmost(const rbtree& that) noexcept {
+
+  if (rightmost == that.end_node_ptr()) {
+    rightmost = end_node_ptr();
+  } else {
+    static_cast<node*>(rightmost)->stitch_right(end_node_ptr());
+  }
+}
 
 template <typename Key, typename Compare>
 std::pair<typename rbtree<Key, Compare>::const_iterator, bool>
@@ -375,13 +467,11 @@ template <typename Key, typename Compare>
 typename rbtree<Key, Compare>::const_iterator 
 rbtree<Key, Compare>::erase(const_iterator first, const_iterator last) {
 
-  auto it = first;
-
-  while (it != last) {
-    it = erase(it);
+  while (first != last) {
+    first = erase(first);
   }
   
-  return it;
+  return first;
 }
 
 template <typename Key, typename Compare>
@@ -402,59 +492,89 @@ void rbtree<Key, Compare>::clear() noexcept {
   free_subtree(root.get());
   root.set(nullptr);
   leftmost = root.end_node_ptr();
+  rightmost = root.end_node_ptr();
 }
 
 template <typename Key, typename Compare>
-std::pair<typename rbtree<Key, Compare>::node*,
-          typename rbtree<Key, Compare>::node*>
+typename rbtree<Key, Compare>::subtree_copy_t 
 rbtree<Key, Compare>::copy_subtree(const node* subtree) const {
 
   if (subtree == nullptr) {
-    return std::make_pair(nullptr, nullptr);
+    return subtree_copy_t{};
   }
 
   return make_subtree_copy(subtree);
 }
 
 template <typename Key, typename Compare>
-std::pair<typename rbtree<Key, Compare>::node*,
-          typename rbtree<Key, Compare>::node*>
+void rbtree<Key, Compare>::stitch_subtree(node* subtree) const noexcept {
+
+  std::stack<node*> stack;
+
+  while (subtree != nullptr || !stack.empty()) {
+
+    if (!stack.empty()) {
+      subtree = stack.top();
+      stack.pop();
+    }
+
+    while (subtree != nullptr) {
+
+      subtree->stitch();
+
+      auto right = subtree->get_right();
+      if (right != nullptr) {
+        stack.push(right);
+      }
+
+      subtree = subtree->get_left();
+    }
+  }
+}
+
+template <typename Key, typename Compare>
+typename rbtree<Key, Compare>::subtree_copy_t
 rbtree<Key, Compare>::make_subtree_copy(const node* subtree) const {
 
-  node *copy_root = new node(*subtree), *copy_leftmost;
-  node *copy = copy_root, *child;
+  subtree_copy_t subtree_copy;
+  node* copy = subtree_copy.root = new node(*subtree), *child;
+
   end_node* parent;
 
   do {
 
     if (subtree->has_left() && !copy->has_left()) {
 
-      subtree = subtree->get_left();
+      subtree = subtree->get_left_unsafe();
       if ((child = new(std::nothrow) node(*subtree)) == nullptr) {
 
-        free_subtree(copy_root);
+        free_subtree(subtree_copy.root);
         throw std::bad_alloc();
       }
 
       copy->tie_left(child);
-      copy = copy->get_left();
+      copy = child;
 
     } else if (subtree->has_right() && !copy->has_right()) {
 
-      subtree = subtree->get_right();
+      subtree = subtree->get_right_unsafe();
       if ((child = new(std::nothrow) node(*subtree)) == nullptr) {
 
-        free_subtree(copy_root);
+        free_subtree(subtree_copy.root);
         throw std::bad_alloc();
       }
 
       copy->tie_right(child);      
-      copy = copy->get_right();
+      copy = child;
 
     } else {
 
       if (subtree == leftmost) {
-        copy_leftmost = copy;
+        subtree_copy.leftmost = copy;
+      }
+
+      if (subtree == rightmost) {
+        subtree_copy.rightmost = copy;
       }
 
       copy = copy->parent();
@@ -464,7 +584,7 @@ rbtree<Key, Compare>::make_subtree_copy(const node* subtree) const {
 
   } while (parent != end_node_ptr());
 
-  return std::make_pair(copy_root, copy_leftmost);
+  return subtree_copy;
 }
 
 template <typename Key, typename Compare>
@@ -479,10 +599,10 @@ void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
   do {
 
     if (subtree->has_left()) {
-      subtree = subtree->get_left();
+      subtree = subtree->get_left_unsafe();
 
     } else if (subtree->has_right()) {
-      subtree = subtree->get_right();
+      subtree = subtree->get_right_unsafe();
 
     } else {
 
@@ -583,7 +703,7 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
   if (subtree_root == nullptr || !subtree_root->has_left())
     return;
 
-  node* rotating = subtree_root->get_left();
+  node* rotating = subtree_root->get_left_unsafe();
 
   if (is_root(subtree_root)) {
     root.set(rotating);
@@ -610,8 +730,8 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
 
   rotating->tie_right(subtree_root);
 
-  subtree_root->size -= 1 + ((rotating->get_left())? rotating->get_left()->size : 0);
-  rotating->size += 1 + ((subtree_root->get_right())? subtree_root->get_right()->size : 0);
+  subtree_root->size -= 1 + ((rotating->has_left())? rotating->get_left_unsafe()->size : 0);
+  rotating->size += 1 + ((subtree_root->has_right())? subtree_root->get_right_unsafe()->size : 0);
 }
 
 template <typename Key, typename Compare>
@@ -657,7 +777,9 @@ bool rbtree<Key, Compare>::insert_node(node* inserting) {
   if (empty()) {
 
     root.set(inserting);
-    leftmost = inserting;
+    
+    leftmost = rightmost = inserting;
+    
     inserting->paint(node::color::BLACK);
 
   } else {
@@ -671,12 +793,16 @@ bool rbtree<Key, Compare>::insert_node(node* inserting) {
     if (inserting == leftmost->get_left()) {
       leftmost = inserting;
     }
+
+    if (inserting == static_cast<node*>(rightmost)->get_right()) {
+      rightmost = inserting;
+    }
   }
 
   inserting->stitch();
   insert_rb_fix(inserting);
 
-  // assert(debug_validate());
+  assert(debug_validate());
   return true;
 }
 
@@ -813,7 +939,7 @@ void rbtree<Key, Compare>::delete_node(node* deleting) {
   decr_subtree_sizes(nd);
   delete nd;
 
-  // assert(debug_validate());
+  assert(debug_validate());
 }
 
 template <typename Key, typename Compare>
@@ -943,7 +1069,7 @@ void rbtree<Key, Compare>::delete_rb_update_leftmost(node* z, node* x) noexcept 
     if (!is_root(z)) {
       leftmost = z->parent();
     } else {
-      leftmost = nullptr;
+      leftmost = end_node_ptr();
     }
   
   } else {
@@ -952,8 +1078,57 @@ void rbtree<Key, Compare>::delete_rb_update_leftmost(node* z, node* x) noexcept 
 }
 
 template <typename Key, typename Compare>
+void rbtree<Key, Compare>::delete_rb_update_rightmost(node* z, node* x) noexcept {
+
+  if (!z->has_left()) {
+    
+    if (!is_root(z)) {
+      rightmost = z->parent();
+    } else {
+      rightmost = end_node_ptr();
+    }
+  
+  } else {
+    rightmost = node::get_rightmost_desc(x);
+  }
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::update_stitches(end_node* prev, end_node* next) noexcept {
+
+  update_prev(prev);
+  update_next(next);
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::update_prev(end_node* prev) noexcept {
+
+  if (prev != end_node_ptr()) {
+
+    auto nd = static_cast<node*>(prev);
+    if (!nd->has_right()) {
+      nd->stitch_right(nd->get_next());
+    }
+  }
+}
+
+template <typename Key, typename Compare>
+void rbtree<Key, Compare>::update_next(end_node* next) noexcept {
+
+  if (next != end_node_ptr()) {
+    auto nd = static_cast<node*>(next);
+    if (!nd->has_left()) {
+      nd->stitch_left(nd->get_prev());
+    }
+  }
+}
+
+template <typename Key, typename Compare>
 typename rbtree<Key, Compare>::node*
 rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
+
+  auto next = z->get_next();
+  auto prev = z->get_prev();
 
   node* parent_of_x = nullptr;
   auto [y, x] = get_y_and_its_decs(z);
@@ -999,19 +1174,21 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
     }
 
     transplant(z, x);
-    parent_of_x->stitch();
+    
+    if (parent_of_x != end_node_ptr()) {
+      parent_of_x->stitch();
+    }
 
     if (leftmost == z) {
       delete_rb_update_leftmost(z, x);
     }
+
+    if (rightmost == z) {
+      delete_rb_update_rightmost(z, x);
+    }
   }
 
-  auto prev = z->get_prev();
-  if (prev != static_cast<node*>(end_node_ptr()) && !prev->has_right()) {
-
-    auto next = (y != z)? y : x;
-    prev->stitch_right((next)? next : prev->get_next());
-  }
+  update_stitches(prev, next);
 
   if (y->is_black()) {
     delete_rb_rebalance(x, parent_of_x);

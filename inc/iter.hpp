@@ -75,25 +75,6 @@ const_iter<Node>& const_iter<Node>::operator++() noexcept {
     node_ptr_ = nd->get_next();
   }
 
-  // if (static_cast<const node*>(node_ptr_)->has_right()) {
-  //   node_ptr_ = node::get_leftmost_desc(static_cast<const node*>(node_ptr_)->get_right());
-
-  // } else {
-
-  //   const end_node* prev = node_ptr_;
-  //   node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();
-
-  //   while (static_cast<const node*>(node_ptr_)->parent_as_end() != nullptr) {
-
-  //     if (prev == node_ptr_->get_left()) {
-  //       break;
-  //     }
-
-  //     prev = node_ptr_;
-  //     node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();  
-  //   }
-  // }
-
   return *this;
 }
 
@@ -108,25 +89,6 @@ const_iter<Node>& const_iter<Node>::operator--() noexcept {
   } else {
     node_ptr_ = nd->get_prev();
   }
-
-  // if (node_ptr_->has_left()) {
-  //   node_ptr_ = node::get_rightmost_desc(node_ptr_->get_left());
-
-  // } else {
-
-  //   const end_node* prev = node_ptr_;
-  //   node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();
-
-  //   while (static_cast<const node*>(node_ptr_)->parent_as_end() != nullptr) {
-
-  //     if (prev == static_cast<const node*>(node_ptr_)->get_right()) {
-  //       break;
-  //     }
-
-  //     prev = node_ptr_;
-  //     node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();  
-  //   }
-  // }
 
   return *this;
 }
