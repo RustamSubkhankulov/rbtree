@@ -605,7 +605,7 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
   if (rotating->has_right()) {
     subtree_root->tie_left(right);
   } else {
-    subtree_root->stitch_left(subtree_root->get_prev(end_node_ptr()));
+    subtree_root->stitch_left(subtree_root->get_prev());
   }
 
   rotating->tie_right(subtree_root);
@@ -642,7 +642,7 @@ void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
   if (rotating->has_left()) {
     subtree_root->tie_right(left);
   } else {
-    subtree_root->stitch_right(subtree_root->get_next(end_node_ptr()));
+    subtree_root->stitch_right(subtree_root->get_next());
   }
 
   rotating->tie_left(subtree_root);
@@ -673,7 +673,7 @@ bool rbtree<Key, Compare>::insert_node(node* inserting) {
     }
   }
 
-  inserting->stitch(end_node_ptr());
+  inserting->stitch();
   insert_rb_fix(inserting);
 
   // assert(debug_validate());
@@ -967,7 +967,7 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
     if (z->has_left()) {
       y->tie_left(z_left);
     } else {
-      y->stitch_left(y->get_prev(end_node_ptr()));
+      y->stitch_left(y->get_prev());
     }
 
     if (y != z->get_right()) {
@@ -999,18 +999,18 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
     }
 
     transplant(z, x);
-    parent_of_x->stitch(end_node_ptr());
+    parent_of_x->stitch();
 
     if (leftmost == z) {
       delete_rb_update_leftmost(z, x);
     }
   }
 
-  auto prev = z->get_prev(end_node_ptr());
+  auto prev = z->get_prev();
   if (prev != static_cast<node*>(end_node_ptr()) && !prev->has_right()) {
 
     auto next = (y != z)? y : x;
-    prev->stitch_right((next)? next : prev->get_next(end_node_ptr()));
+    prev->stitch_right((next)? next : prev->get_next());
   }
 
   if (y->is_black()) {

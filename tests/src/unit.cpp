@@ -65,7 +65,9 @@ TEST(UNIT_TESTING, MOVE) {
   tree t = ilist;
   tree moved1 = std::move(t);
   
+  std::cerr << "before \n";
   EXPECT_EQ(moved1, ilist);
+  std::cerr << "after \n";
 
   tree moved2;
   moved2 = std::move(moved1);

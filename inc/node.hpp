@@ -99,6 +99,9 @@ public:
   bool is_thread_left() const noexcept {
     return left_is_thread;
   }
+
+  virtual end_node_t* parent_as_end() const { return nullptr; }
+  virtual node_t* parent() const { return nullptr; }
 };
 
 /* Node structure used in searching tree. */
@@ -202,8 +205,8 @@ public:
   }
 
   /* Get parent node as end_node pointer or node_t pointer. */
-  end_node* parent_as_end() const { return parent_; }
-  node_t* parent() const { return static_cast<node_t*>(parent_); }
+  end_node* parent_as_end() const override { return parent_; }
+  node_t* parent() const override { return static_cast<node_t*>(parent_); }
 
   /* Set parent node using end_node pointer. */
   void set_parent(end_node* parent) { parent_ = parent; }
@@ -291,13 +294,13 @@ public:
     return (subtree_root != nullptr)? subtree_root->size : 0;
   }
 
-  const node_t* get_prev(const end_node* root) const noexcept;
-  node_t* get_prev(const end_node* root) noexcept;
+  const node_t* get_prev() const noexcept;
+  node_t* get_prev() noexcept;
 
-  const node_t* get_next(const end_node* root) const noexcept;
-  node_t* get_next(const end_node* root) noexcept;
+  const node_t* get_next() const noexcept;
+  node_t* get_next() noexcept;
 
-  void stitch(const end_node* root) noexcept;
+  void stitch() noexcept;
 
   /* Validate node - checks its rRB-properties. */
   bool debug_validate() const;
@@ -350,7 +353,7 @@ const node_t<Key>* node_t<Key>::get_rightmost_desc(const node_t* cur) noexcept {
 }
 
 template <typename Key>
-const node_t<Key>* node_t<Key>::get_prev(const end_node* root) const noexcept {
+const node_t<Key>* node_t<Key>::get_prev() const noexcept {
 
   if (has_left()) {
     return node_t::get_rightmost_desc(left);
@@ -360,7 +363,7 @@ const node_t<Key>* node_t<Key>::get_prev(const end_node* root) const noexcept {
     const node_t* prev = this;
     const end_node* node_ptr = parent_as_end();
 
-    while (node_ptr != root) {
+    while (node_ptr->parent_as_end() != nullptr) {
 
       auto nd = static_cast<const node_t*>(node_ptr);
 
@@ -377,7 +380,7 @@ const node_t<Key>* node_t<Key>::get_prev(const end_node* root) const noexcept {
 }
 
 template <typename Key>
-node_t<Key>* node_t<Key>::get_prev(const end_node* root) noexcept {
+node_t<Key>* node_t<Key>::get_prev() noexcept {
 
   if (has_left()) {
     return node_t::get_rightmost_desc(left);
@@ -387,7 +390,7 @@ node_t<Key>* node_t<Key>::get_prev(const end_node* root) noexcept {
     node_t* prev = this;
     end_node* node_ptr = parent_as_end();
 
-    while (node_ptr != root) {
+    while (node_ptr->parent_as_end() != nullptr) {
 
       auto nd = static_cast<node_t*>(node_ptr);
 
@@ -404,7 +407,7 @@ node_t<Key>* node_t<Key>::get_prev(const end_node* root) noexcept {
 }
 
 template <typename Key>
-const node_t<Key>* node_t<Key>::get_next(const end_node* root) const noexcept {
+const node_t<Key>* node_t<Key>::get_next() const noexcept {
 
   if (has_right()) {
     return node_t::get_leftmost_desc(right);
@@ -414,7 +417,7 @@ const node_t<Key>* node_t<Key>::get_next(const end_node* root) const noexcept {
     const node_t* prev = this;
     const end_node* node_ptr = parent_as_end();
 
-    while (node_ptr != root) {
+    while (node_ptr->parent_as_end() != nullptr) {
 
       auto nd = static_cast<const node_t*>(node_ptr);
 
@@ -431,7 +434,7 @@ const node_t<Key>* node_t<Key>::get_next(const end_node* root) const noexcept {
 }
 
 template <typename Key>
-node_t<Key>* node_t<Key>::get_next(const end_node* root) noexcept {
+node_t<Key>* node_t<Key>::get_next() noexcept {
 
   if (has_right()) {
     return node_t::get_leftmost_desc(right);
@@ -441,7 +444,7 @@ node_t<Key>* node_t<Key>::get_next(const end_node* root) noexcept {
     node_t* prev = this;
     end_node* node_ptr = parent_as_end();
 
-    while (node_ptr != root) {
+    while (node_ptr->parent_as_end() != nullptr) {
 
       auto nd = static_cast<node_t*>(node_ptr);
 
@@ -458,14 +461,14 @@ node_t<Key>* node_t<Key>::get_next(const end_node* root) noexcept {
 }
 
 template <typename Key>
-void node_t<Key>::stitch(const end_node* root) noexcept {
+void node_t<Key>::stitch() noexcept {
 
   if (!has_left()) {
-    stitch_left(get_prev(root));
+    stitch_left(get_prev());
   }
 
   if (!has_right()) {
-    stitch_right(get_next(root));
+    stitch_right(get_next());
   } 
 }
 

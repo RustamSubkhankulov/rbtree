@@ -66,24 +66,33 @@ public:
 template <typename Node>
 const_iter<Node>& const_iter<Node>::operator++() noexcept { 
 
-  if (static_cast<const node*>(node_ptr_)->has_right()) {
-    node_ptr_ = node::get_leftmost_desc(static_cast<const node*>(node_ptr_)->get_right());
-
+  auto nd = static_cast<const node*>(node_ptr_);
+  node* next = nd->get_right_thread();
+  
+  if (next != nullptr) {
+    node_ptr_ = next;
   } else {
-
-    const end_node* prev = node_ptr_;
-    node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();
-
-    while (static_cast<const node*>(node_ptr_)->parent_as_end() != nullptr) {
-
-      if (prev == node_ptr_->get_left()) {
-        break;
-      }
-
-      prev = node_ptr_;
-      node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();  
-    }
+    node_ptr_ = nd->get_next();
   }
+
+  // if (static_cast<const node*>(node_ptr_)->has_right()) {
+  //   node_ptr_ = node::get_leftmost_desc(static_cast<const node*>(node_ptr_)->get_right());
+
+  // } else {
+
+  //   const end_node* prev = node_ptr_;
+  //   node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();
+
+  //   while (static_cast<const node*>(node_ptr_)->parent_as_end() != nullptr) {
+
+  //     if (prev == node_ptr_->get_left()) {
+  //       break;
+  //     }
+
+  //     prev = node_ptr_;
+  //     node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();  
+  //   }
+  // }
 
   return *this;
 }
@@ -91,24 +100,33 @@ const_iter<Node>& const_iter<Node>::operator++() noexcept {
 template <typename Node>
 const_iter<Node>& const_iter<Node>::operator--() noexcept { 
   
-  if (node_ptr_->has_left()) {
-    node_ptr_ = node::get_rightmost_desc(node_ptr_->get_left());
-
+  auto nd = static_cast<const node*>(node_ptr_);
+  node* prev = nd->get_left_thread();
+  
+  if (prev != nullptr) {
+    node_ptr_ = prev;
   } else {
-
-    const end_node* prev = node_ptr_;
-    node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();
-
-    while (static_cast<const node*>(node_ptr_)->parent_as_end() != nullptr) {
-
-      if (prev == static_cast<const node*>(node_ptr_)->get_right()) {
-        break;
-      }
-
-      prev = node_ptr_;
-      node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();  
-    }
+    node_ptr_ = nd->get_prev();
   }
+
+  // if (node_ptr_->has_left()) {
+  //   node_ptr_ = node::get_rightmost_desc(node_ptr_->get_left());
+
+  // } else {
+
+  //   const end_node* prev = node_ptr_;
+  //   node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();
+
+  //   while (static_cast<const node*>(node_ptr_)->parent_as_end() != nullptr) {
+
+  //     if (prev == static_cast<const node*>(node_ptr_)->get_right()) {
+  //       break;
+  //     }
+
+  //     prev = node_ptr_;
+  //     node_ptr_ = static_cast<const node*>(node_ptr_)->parent_as_end();  
+  //   }
+  // }
 
   return *this;
 }
