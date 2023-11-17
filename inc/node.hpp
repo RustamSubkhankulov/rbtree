@@ -381,9 +381,14 @@ public:
   bool debug_validate_size() const noexcept;
 
   /* Helper functions used for graphical dump of the tree. */
-  void write_dot(std::ofstream& of) const;
-  static void write_nill_dot(std::ofstream& of, uintptr_t node_num);
-  static void write_pastend_dot(std::ofstream& of, uintptr_t node_num);
+  template <typename CharT>
+  void write_dot(std::basic_ostream<CharT>& os) const;
+
+  template <typename CharT>
+  static void write_nill_dot(std::basic_ostream<CharT>& os, uintptr_t node_num);
+  
+  template <typename CharT>
+  static void write_pastend_dot(std::basic_ostream<CharT>& os, uintptr_t node_num);
 };
 
 template <typename Key>
@@ -796,81 +801,84 @@ public:
 
 /* Write node desctiption in dot format to temporary text file. */
 template <typename Key>
-void DETAIL::node_t<Key>::write_dot(std::ofstream& of) const {
+  template <typename CharT>
+  void DETAIL::node_t<Key>::write_dot(std::basic_ostream<CharT>& os) const {
 
-  of << "NODE" << this << " ["
-     << " label = < " << value << " <BR /> "
-     << " <FONT POINT-SIZE=\"10\"> size: " << size << " </FONT> <BR /> "
-     << " <FONT POINT-SIZE=\"10\"> addr: " << (void*) this << " </FONT>> "
-     << " color = \"" << (is_red()? "#FD0000" : "#000000") << "\""
-     << " fontcolor = \"" << (is_black()? "#FFFFFF" : "#000000") << "\""
-     << " ]; \n";
+    os << "NODE" << this << " ["
+       << " label = < " << value << " <BR /> "
+       << " <FONT POINT-SIZE=\"10\"> size: " << size << " </FONT> <BR /> "
+       << " <FONT POINT-SIZE=\"10\"> addr: " << (void*) this << " </FONT>> "
+       << " color = \"" << (is_red()? "#FD0000" : "#000000") << "\""
+       << " fontcolor = \"" << (is_black()? "#FFFFFF" : "#000000") << "\""
+       << " ]; \n";
 
-  of << "NODE" << this << " -> "
-     << "NODE" << parent_ << " ["
-     << " style = \"dashed\""
-     << " label = \"P\" ]; \n";
+    os << "NODE" << this << " -> "
+       << "NODE" << parent_ << " ["
+       << " style = \"dashed\""
+       << " label = \"P\" ]; \n";
 
-  const void *l, *r; 
+    const void *l, *r; 
 
-  if (!has_left()) {
+    if (!has_left()) {
 
-    write_nill_dot(of, reinterpret_cast<uintptr_t>(&left));
-    l = reinterpret_cast<const void*>(&left);
+      write_nill_dot(os, reinterpret_cast<uintptr_t>(&left));
+      l = reinterpret_cast<const void*>(&left);
 
-  } else {
-    l = reinterpret_cast<const void*>(left);
+    } else {
+      l = reinterpret_cast<const void*>(left);
+    }
+
+    if (!has_right()) {
+
+      write_nill_dot(os, reinterpret_cast<uintptr_t>(&right));
+      r = reinterpret_cast<const void*>(&right);
+
+    } else {
+      r = reinterpret_cast<const void*>(right);
+    }
+
+    os << "NODE" << this << " -> "
+       << "NODE" << l << " [ label = \"L\" ]; \n";
+
+    os << "NODE" << this << " -> "
+       << "NODE" << r << " [ label = \"R\" ]; \n";
+
+    if (left_is_thread) {
+
+      os << "NODE" << this << " -> "
+         << "NODE" << left
+         << " [ label = \"PREV\" style = \"dotted\" " 
+         << " fontcolor = \"#a3a3c2\" color = \"#a3a3c2\" ]; \n"; 
+    }
+
+    if (right_is_thread) {
+
+      os << "NODE" << this << " -> "
+         << "NODE" << right
+         << " [ label = \"NEXT\" style = \"dotted\" " 
+         << " fontcolor = \"#a3a3c2\" color = \"#a3a3c2\" ]; \n"; 
+    }
   }
-
-  if (!has_right()) {
-
-    write_nill_dot(of, reinterpret_cast<uintptr_t>(&right));
-    r = reinterpret_cast<const void*>(&right);
-
-  } else {
-    r = reinterpret_cast<const void*>(right);
-  }
-
-  of << "NODE" << this << " -> "
-     << "NODE" << l << " [ label = \"L\" ]; \n";
-
-  of << "NODE" << this << " -> "
-     << "NODE" << r << " [ label = \"R\" ]; \n";
-
-  if (left_is_thread) {
-
-    of << "NODE" << this << " -> "
-       << "NODE" << left
-       << " [ label = \"PREV\" style = \"dotted\" " 
-       << " fontcolor = \"#a3a3c2\" color = \"#a3a3c2\" ]; \n"; 
-  }
-
-  if (right_is_thread) {
-
-    of << "NODE" << this << " -> "
-       << "NODE" << right
-       << " [ label = \"NEXT\" style = \"dotted\" " 
-       << " fontcolor = \"#a3a3c2\" color = \"#a3a3c2\" ]; \n"; 
-  }
-}
 
 /* Helper function to add nill nodes. */
 template <typename Key>
-void DETAIL::node_t<Key>::write_nill_dot(std::ofstream& of, uintptr_t node_num) {
+  template <typename CharT>
+  void DETAIL::node_t<Key>::write_nill_dot(std::basic_ostream<CharT>& os, uintptr_t node_num) {
 
-  of << "NODE" << std::hex << std::showbase << node_num << std::dec << " ["
-     << " label = \"nill\" color = \"#000000\" width=0.1" 
-     << " fontcolor = \"#FFFFFF\" fontsize = \"10\" shape = \"oval\" ]; \n";
-}
+    os << "NODE" << std::hex << std::showbase << node_num << std::dec << " ["
+       << " label = \"nill\" color = \"#000000\" width=0.1" 
+       << " fontcolor = \"#FFFFFF\" fontsize = \"10\" shape = \"oval\" ]; \n";
+  }
 
 /* Helper function to add past-end node. */
 template <typename Key>
-void DETAIL::node_t<Key>::write_pastend_dot(std::ofstream& of, uintptr_t node_num) {
+  template <typename CharT>
+  void DETAIL::node_t<Key>::write_pastend_dot(std::basic_ostream<CharT>& os, uintptr_t node_num) {
 
-  of << "NODE" << std::hex << std::showbase << node_num << std::dec << " ["
-     << " label = \"PAST-END\" color = \"#00FFFF\" width=0.1" 
-     << " fontcolor = \"#000000\" fontsize = \"10\" shape = \"diamond\" ]; \n";
-}
+    os << "NODE" << std::hex << std::showbase << node_num << std::dec << " ["
+       << " label = \"PAST-END\" color = \"#00FFFF\" width=0.1" 
+       << " fontcolor = \"#000000\" fontsize = \"10\" shape = \"diamond\" ]; \n";
+  }
 
 }; /* namespace DETAIL */
 

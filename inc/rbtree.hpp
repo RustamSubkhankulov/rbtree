@@ -241,8 +241,12 @@ public:
   /* Returns the function that compares keys. */
   key_compare key_comp() const { return cmp; }
 
-  /* Graphical dump of the tree using graphviz dot. */
+  /* Graphical dump of the tree using graphviz dot to image with given name. */
   void graph_dump(const std::string& graph_name) const;
+
+  /* Graphical dump of the tree using graphviz dot to ostream. */
+  template <typename CharT>
+  void graph_dump(std::basic_ostream<CharT>& os) const;
 
 private:
 
@@ -324,7 +328,9 @@ private:
   bool debug_validate() const noexcept;
 
   /* Helper function for graphical dump. */
-  void write_dot(std::ofstream& of) const;
+  template <typename CharT>
+  void write_dot(std::basic_ostream<CharT>& os) const;
+
   static void generate_graph(const std::string& dot_file, 
                              const std::string& graph_name);
 }; 
@@ -1192,23 +1198,29 @@ void rbtree<Key, Compare>::graph_dump(const std::string& graph_name) const {
     return; 
   }
   
-  dot_file << "digraph G{\n rankdir=TB;\n "
-           << "node[ shape = doubleoctagon; style = filled ];\n"
-           << "edge[ arrowhead = vee ];\n";
-
-  write_dot(dot_file);
-
-  dot_file << "\n}\n";
-  dot_file.close();
+  graph_dump(dot_file);
 
   generate_graph(dot_file_name, graph_name);
   remove(dot_file_name);
 }
 
+template <typename Key, typename Compare>
+  template <typename CharT>
+  void rbtree<Key, Compare>::graph_dump(std::basic_ostream<CharT>& os) const {
+
+    os << "digraph G{\n rankdir=TB;\n "
+       << "node[ shape = doubleoctagon; style = filled ];\n"
+       << "edge[ arrowhead = vee ];\n";
+
+    write_dot(os);
+
+    os << "\n}\n";
+  }
+
 /* Call dot to generate png image from txt source. */
 template <typename Key, typename Compare>
 void rbtree<Key, Compare>::generate_graph(const std::string& dot_file, 
-                                         const std::string& graph_name) {
+                                          const std::string& graph_name) {
 
   std::string cmnd = "dot " + dot_file + " -Tpng -o " + graph_name;
   std::system(cmnd.c_str());
@@ -1216,28 +1228,29 @@ void rbtree<Key, Compare>::generate_graph(const std::string& dot_file,
 
 /* Write tree desctiption in dot format to temporary text file. */
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::write_dot(std::ofstream& of) const {
+  template <typename CharT>
+  void rbtree<Key, Compare>::write_dot(std::basic_ostream<CharT>& os) const {
 
-  using std::size_t;
+    using std::size_t;
 
-  node::write_pastend_dot(of, reinterpret_cast<uintptr_t>(end_node_ptr()));
+    node::write_pastend_dot(os, reinterpret_cast<uintptr_t>(end_node_ptr()));
 
-  if (empty()) {
-    return;
+    if (empty()) {
+      return;
+    }
+
+    if (root.get() != nullptr) {
+
+      os << "NODE" << end_node_ptr() << " -> "
+         << "NODE" << root.get() << " ["
+         << " label = \"L\" ]; \n";
+    }
+
+    for (auto it = cbegin(), end_it = cend(); it != end_it; ++it) {
+
+      static_cast<const node*>(it.node_ptr_)->write_dot(os);
+    }
   }
-
-  if (root.get() != nullptr) {
-
-    of << "NODE" << end_node_ptr() << " -> "
-       << "NODE" << root.get() << " ["
-       << " label = \"L\" ]; \n";
-  }
-
-  for (auto it = cbegin(), end_it = cend(); it != end_it; ++it) {
-
-    static_cast<const node*>(it.xnode_ptr_)->write_dot(of);
-  }
-}
 
 }; /* namespace RBTREE */
 
