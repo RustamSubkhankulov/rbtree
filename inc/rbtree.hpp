@@ -599,10 +599,14 @@ void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
   do {
 
     if (subtree->has_left()) {
+
       subtree = subtree->get_left_unsafe();
+      continue;
 
     } else if (subtree->has_right()) {
+
       subtree = subtree->get_right_unsafe();
+      continue;
 
     } else {
 
@@ -610,14 +614,11 @@ void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
       parent = subtree->parent_as_end();
       subtree = subtree->parent();
 
-      if (parent != end_node_ptr()) {
+      if (deleting->on_left()) {
+        subtree->set_left(nullptr);
 
-        if (deleting->on_left()) {
-          subtree->set_left(nullptr);
-
-        } else {
-          subtree->set_right(nullptr);
-        }
+      } else {
+        subtree->set_right(nullptr);
       }
 
       delete deleting;
@@ -632,15 +633,14 @@ rbtree<Key, Compare>::find_equiv_node(const node* subtree_root, key_type key) co
 
   while (subtree_root != nullptr) {
 
-    if (equiv(key, subtree_root->value)) {
-      return subtree_root;
-    }
-
     if (cmp(key, subtree_root->value)) {
       subtree_root = subtree_root->get_left();
 
-    } else {
+    } else if (cmp(subtree_root->value, key)) {
       subtree_root = subtree_root->get_right();
+
+    } else {
+      return subtree_root;
     }
   }
 
@@ -904,19 +904,19 @@ bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) 
   while (current != nullptr) {
 
     parent = current;
-    if (equiv(inserting->value, current->value)) {
-      return false;
-    }
 
     if (!cmp(inserting->value, current->value)) {
 
       on_right = true;
       current = current->get_right();
 
-    } else {
+    } else if (!cmp(current->value, inserting->value)) {
 
       on_right = false;
       current = current->get_left();
+
+    } else {
+      return false;
     }
   }
 
@@ -1204,10 +1204,12 @@ void rbtree<Key, Compare>::incr_subtree_sizes(end_node* nd) noexcept {
   }
 
   node* cur;
-  for (; nd != end_node_ptr(); cur = static_cast<node*>(nd),
-                             ++cur->size, 
-                          nd = cur->parent_as_end())
-    continue;
+  while (nd != end_node_ptr()) {
+
+    cur = static_cast<node*>(nd);
+    ++cur->size;
+    nd = cur->parent_as_end();
+  }
 }
 
 template <typename Key, typename Compare>
@@ -1218,10 +1220,12 @@ void rbtree<Key, Compare>::decr_subtree_sizes(end_node* nd) noexcept {
   }
 
   node* cur;
-  for (; nd != end_node_ptr(); cur = static_cast<node*>(nd),
-                             --cur->size, 
-                          nd = cur->parent_as_end())
-    continue;
+  while (nd != end_node_ptr()) {
+
+    cur = static_cast<node*>(nd);
+    --cur->size;
+    nd = cur->parent_as_end();
+  }
 }
 
 template <typename Key, typename Compare>
