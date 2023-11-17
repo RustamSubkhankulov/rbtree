@@ -61,4 +61,4 @@ Results of comparison:
 | 5.000                 | 50,709                   | 158,41        |
 | 7.500                 | 175,15                   | 513,59        |
 
-<img src="https://github.com/RustamSubkhankulov/cpp-course/blob/main/rbtree/images/graph.png" alt="tree" width="800">
+<img src="https://github.com/RustamSubkhankulov/rbtree/blob/main/images/graph.png" alt="graph" width="800">
