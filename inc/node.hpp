@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <ios>
+#include <stack>
 #include <string>
 #include <memory>
 #include <cstdio>
@@ -27,6 +28,7 @@ public:
 
 protected:
 
+  /* Flag that shows that left pointer is thread, node left child. */
   bool left_is_thread = false;
   node_t* left = nullptr;
 
@@ -50,24 +52,29 @@ public:
 
   virtual ~end_node_t() {};
 
+  /* Get letf child if it is present, otherwise nullptr. */
   node_t* get_left() const noexcept { 
     return (left_is_thread)? nullptr : left; 
   }
 
+  /* Get link to prev node if it is present, otherwise nullptr. */
   node_t* get_left_thread() const noexcept {
     return (left_is_thread)? left : nullptr;
   }
 
+  /* Get pointer to left node - child or prev. */
   node_t* get_left_unsafe() const noexcept {
     return left;
   }
 
+  /* Set pointer to left child. */
   void set_left(node_t* nd) noexcept {
 
     left_is_thread = false;
     left = nd;
   }
 
+  /* Set pointer to left child and set its parent to this. */
   node_t* tie_left(node_t* child) noexcept {
 
     node_t* prev = left;
@@ -82,6 +89,7 @@ public:
     return prev;
   }
 
+  /* Make thread to prev node. */
   node_t* stitch_left(end_node_t* nd) noexcept {
 
     node_t* prev = left;
@@ -92,14 +100,20 @@ public:
     return prev;
   }
 
+  /* Check whether left child is present. */
   bool has_left() const noexcept { 
     return (!left_is_thread) && (left != nullptr); 
   }
 
+  /* Check whether thread to prev node is present. */
   bool is_thread_left() const noexcept {
     return left_is_thread;
   }
 
+  /* 
+   * Get parent node as end_node pointer or node_t pointer. 
+   * Returns nullptr since end node has no parent.
+   */
   virtual end_node_t* parent_as_end() const { return nullptr; }
   virtual node_t* parent() const { return nullptr; }
 };
@@ -130,6 +144,7 @@ public:
 
 private:
 
+  /* Flag that shows that left pointer is thread, node left child. */
   using end_node::left_is_thread;
   using end_node::left;
 
@@ -185,19 +200,25 @@ public:
   using end_node::get_left_thread;
   using end_node::get_left_unsafe;
 
+  /* Get right child if it is present, otherwise nullptr. */
   node_t* get_right() const { 
     return (right_is_thread)? nullptr : right; 
   }
 
+  /* Get link to next node if it is present, otherwise nullptr. */
   node_t* get_right_thread() const { 
     return (right_is_thread)? right : nullptr; 
   }
 
+  /* Get pointer to right node - child or prev. */
   node_t* get_right_unsafe() const { 
     return right; 
   }
 
+  /* Set pointer to left child. */
   using end_node::set_left;
+
+  /* Set pointer to right child. */
   void set_right(node_t* nd) noexcept {
 
     right_is_thread = false;
@@ -213,12 +234,18 @@ public:
 
   bool is_leaf() const noexcept { return ((left == nullptr) && (right == nullptr));}
 
+  /* Check whether left child is present. */
   using end_node::has_left;
+
+  /* Check whether right child is present. */
   bool has_right() const noexcept { 
     return (!right_is_thread) && (right != nullptr);
   }
 
+  /* Check whether thread to prev node is present. */
   using end_node::is_thread_left;
+
+  /* Check whether thread to next node is present. */
   bool is_thread_right() const noexcept {
     return right_is_thread;
   }
@@ -243,6 +270,7 @@ public:
    */
   void paint (enum color clr) noexcept { color = clr; }
 
+  /* Set pointer to right child and set its parent to this. */
   node_t* tie_right(node_t* child) noexcept {
 
     node_t* prev = right;
@@ -257,7 +285,10 @@ public:
     return prev;
   }
 
+  /* Make thread to prev node. */
   using end_node::stitch_left;
+
+  /* Make thread to next node. */
   node_t* stitch_right(end_node* nd) noexcept {
 
     node_t* prev = right;
@@ -284,9 +315,11 @@ public:
     return (parent_ == nullptr)? nullptr : parent()->sibling();
   }
 
+  /* Get smallest element in subtree. */
   static const node_t* get_leftmost_desc (const node_t* subtree_root) noexcept;
   static node_t* get_leftmost_desc (node_t* subtree_root) noexcept;
   
+  /* Get greatest element in subtree. */
   static const node_t* get_rightmost_desc(const node_t* subtree_root) noexcept;
   static node_t* get_rightmost_desc(node_t* subtree_root) noexcept;
 
@@ -294,12 +327,45 @@ public:
     return (subtree_root != nullptr)? subtree_root->size : 0;
   }
 
+  /* Structure holding info about subtree: root, leftmost and rightmost nodes */
+  struct subtree_info_t {
+
+    const node_t* root;
+    const end_node* leftmost;
+    const end_node* rightmost;
+  };
+
+  /* Structure holding info about newly made subtree copy. */
+  struct subtree_copy_t {
+
+    node_t* root;
+    end_node* leftmost;
+    end_node* rightmost;
+  };
+
+  /* Make a copy of subtree. */
+  static subtree_copy_t copy_subtree(const subtree_info_t subtree_info, 
+                                     const      end_node* end_node_ptr);
+
+  /* Stitch each node in subtree. */
+  static void stitch_subtree(node_t* subtree) noexcept;
+
+  /* Free given subtree. */
+  static void free_subtree(node_t* subtree, const end_node* end_node_ptr) noexcept;
+
+  /* Get previous node. */
   const end_node* get_prev() const noexcept;
   end_node* get_prev() noexcept;
 
+  /* Get next node. */
   const end_node* get_next() const noexcept;
   end_node* get_next() noexcept;
 
+  /* 
+   * Make stitches to next and previous nodes.
+   * Stitches are only made if pointer to left or right elements 
+   * accrodingly is nullptr - no such descnedant. 
+   */
   void stitch() noexcept;
 
   /* Validate node. Call function below. */
@@ -316,6 +382,132 @@ public:
   static void write_nill_dot(std::ofstream& of, uintptr_t node_num);
   static void write_pastend_dot(std::ofstream& of, uintptr_t node_num);
 };
+
+template <typename Key>
+node_t<Key>::subtree_copy_t 
+node_t<Key>::copy_subtree(const subtree_info_t subtree_info, const end_node* end_node_ptr) {
+
+  subtree_copy_t subtree_copy{};
+
+  if (subtree_info.root == nullptr) {
+    return subtree_copy;
+  }
+
+  const node_t* subtree = subtree_info.root;
+  node_t* copy = subtree_copy.root = new node_t(*subtree), *child;
+  end_node* parent;
+
+  do {
+
+    if (subtree->has_left() && !copy->has_left()) {
+
+      subtree = subtree->get_left_unsafe();
+      if ((child = new(std::nothrow) node_t(*subtree)) == nullptr) {
+
+        node_t::free_subtree(subtree_copy.root, end_node_ptr);
+        throw std::bad_alloc();
+      }
+
+      copy->tie_left(child);
+      copy = child;
+
+    } else if (subtree->has_right() && !copy->has_right()) {
+
+      subtree = subtree->get_right_unsafe();
+      if ((child = new(std::nothrow) node_t(*subtree)) == nullptr) {
+
+        node_t::free_subtree(subtree_copy.root, end_node_ptr);
+        throw std::bad_alloc();
+      }
+
+      copy->tie_right(child);      
+      copy = child;
+
+    } else {
+
+      if (subtree == subtree_info.leftmost) {
+        subtree_copy.leftmost = copy;
+      }
+
+      if (subtree == subtree_info.rightmost) {
+        subtree_copy.rightmost = copy;
+      }
+
+      copy = copy->parent();
+      parent = subtree->parent_as_end();
+      subtree = subtree->parent();
+    }
+
+  } while (parent != end_node_ptr);
+
+  return subtree_copy;
+}
+
+template <typename Key>
+void node_t<Key>::stitch_subtree(node_t* subtree) noexcept {
+
+  std::stack<node_t*> stack;
+
+  while (subtree != nullptr || !stack.empty()) {
+
+    if (!stack.empty()) {
+      subtree = stack.top();
+      stack.pop();
+    }
+
+    while (subtree != nullptr) {
+
+      subtree->stitch();
+
+      auto right = subtree->get_right();
+      if (right != nullptr) {
+        stack.push(right);
+      }
+
+      subtree = subtree->get_left();
+    }
+  }
+}
+
+template <typename Key>
+void node_t<Key>::free_subtree(node_t* subtree, const end_node* end_node_ptr) noexcept {
+
+  if (subtree == nullptr) {
+    return;
+  }
+
+  end_node* parent;
+
+  do {
+
+    if (subtree->has_left()) {
+
+      subtree = subtree->get_left_unsafe();
+      continue;
+
+    } else if (subtree->has_right()) {
+
+      subtree = subtree->get_right_unsafe();
+      continue;
+
+    } else {
+
+      node_t* deleting = subtree;
+      parent = subtree->parent_as_end();
+      subtree = subtree->parent();
+
+      if (deleting->on_left()) {
+        subtree->set_left(nullptr);
+
+      } else {
+        subtree->set_right(nullptr);
+      }
+
+      delete deleting;
+    }
+
+  } while (parent != end_node_ptr);
+}
 
 template <typename Key>
 node_t<Key>* node_t<Key>::get_leftmost_desc(node_t* cur) noexcept {

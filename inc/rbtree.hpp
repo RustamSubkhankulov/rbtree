@@ -97,10 +97,10 @@ public:
     auto copy = that.copy_subtree(that.root.get());
     
     root.set(copy.root);
-    leftmost = copy.leftmost;
-    rightmost = copy.rightmost;
+    leftmost = (copy.leftmost)? copy.leftmost : end_node_ptr();
+    rightmost = (copy.rightmost)? copy.rightmost : end_node_ptr();
 
-    stitch_subtree(root.get());
+    node::stitch_subtree(root.get());
   }
 
   /* Move ctor. */
@@ -263,25 +263,11 @@ private:
   void relink_leftmost(const rbtree& that) noexcept;
   void relink_rightmost(const rbtree& that) noexcept;
 
-  /* Structure holding info about newly made copy of subtree. */
-  struct subtree_copy_t {
-
-    node* root;
-    node* leftmost;
-    node* rightmost;
-  };
-
   /* Make a copy of subtree. */
-  subtree_copy_t copy_subtree(const node* subtree) const;
-  
-  /* Stitch each node in subtree. */
-  void stitch_subtree(node* subtree) const noexcept;
+  node::subtree_copy_t copy_subtree(const node* subtree) const;
 
   /* Free given subtree. */
   void free_subtree(node* subtree) const noexcept;
-
-  /* Helper for copying. */
-  subtree_copy_t make_subtree_copy(const node* subtree) const;
 
   /* Equivalence relationship deduced from compare function. */
   bool equiv(const key_type& lhs, const key_type& rhs) const {
@@ -496,135 +482,16 @@ void rbtree<Key, Compare>::clear() noexcept {
 }
 
 template <typename Key, typename Compare>
-typename rbtree<Key, Compare>::subtree_copy_t 
+typename rbtree<Key, Compare>::node::subtree_copy_t 
 rbtree<Key, Compare>::copy_subtree(const node* subtree) const {
 
-  if (subtree == nullptr) {
-    return subtree_copy_t{};
-  }
-
-  return make_subtree_copy(subtree);
-}
-
-template <typename Key, typename Compare>
-void rbtree<Key, Compare>::stitch_subtree(node* subtree) const noexcept {
-
-  std::stack<node*> stack;
-
-  while (subtree != nullptr || !stack.empty()) {
-
-    if (!stack.empty()) {
-      subtree = stack.top();
-      stack.pop();
-    }
-
-    while (subtree != nullptr) {
-
-      subtree->stitch();
-
-      auto right = subtree->get_right();
-      if (right != nullptr) {
-        stack.push(right);
-      }
-
-      subtree = subtree->get_left();
-    }
-  }
-}
-
-template <typename Key, typename Compare>
-typename rbtree<Key, Compare>::subtree_copy_t
-rbtree<Key, Compare>::make_subtree_copy(const node* subtree) const {
-
-  subtree_copy_t subtree_copy;
-  node* copy = subtree_copy.root = new node(*subtree), *child;
-
-  end_node* parent;
-
-  do {
-
-    if (subtree->has_left() && !copy->has_left()) {
-
-      subtree = subtree->get_left_unsafe();
-      if ((child = new(std::nothrow) node(*subtree)) == nullptr) {
-
-        free_subtree(subtree_copy.root);
-        throw std::bad_alloc();
-      }
-
-      copy->tie_left(child);
-      copy = child;
-
-    } else if (subtree->has_right() && !copy->has_right()) {
-
-      subtree = subtree->get_right_unsafe();
-      if ((child = new(std::nothrow) node(*subtree)) == nullptr) {
-
-        free_subtree(subtree_copy.root);
-        throw std::bad_alloc();
-      }
-
-      copy->tie_right(child);      
-      copy = child;
-
-    } else {
-
-      if (subtree == leftmost) {
-        subtree_copy.leftmost = copy;
-      }
-
-      if (subtree == rightmost) {
-        subtree_copy.rightmost = copy;
-      }
-
-      copy = copy->parent();
-      parent = subtree->parent_as_end();
-      subtree = subtree->parent();
-    }
-
-  } while (parent != end_node_ptr());
-
-  return subtree_copy;
+  return node::copy_subtree((struct node::subtree_info_t){subtree, leftmost, rightmost}, end_node_ptr());
 }
 
 template <typename Key, typename Compare>
 void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
 
-  if (subtree == nullptr) {
-    return;
-  }
-
-  end_node* parent;
-
-  do {
-
-    if (subtree->has_left()) {
-
-      subtree = subtree->get_left_unsafe();
-      continue;
-
-    } else if (subtree->has_right()) {
-
-      subtree = subtree->get_right_unsafe();
-      continue;
-
-    } else {
-
-      node* deleting = subtree;
-      parent = subtree->parent_as_end();
-      subtree = subtree->parent();
-
-      if (deleting->on_left()) {
-        subtree->set_left(nullptr);
-
-      } else {
-        subtree->set_right(nullptr);
-      }
-
-      delete deleting;
-    }
-
-  } while (parent != end_node_ptr());
+  node::free_subtree(subtree, end_node_ptr());
 }
 
 template <typename Key, typename Compare>
