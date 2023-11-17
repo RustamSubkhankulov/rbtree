@@ -241,13 +241,6 @@ public:
   /* Returns the function that compares keys. */
   key_compare key_comp() const { return cmp; }
 
-  /* Equality and unequality comparisons. */
-  friend bool operator==(const rbtree& lhs, const rbtree& rhs) {
-
-    return (lhs.size() == rhs.size()) 
-         && std::equal(lhs.begin(), lhs.end(), rhs.begin());
-  }
-
   /* Graphical dump of the tree using graphviz dot. */
   void graph_dump(const std::string& graph_name) const;
 
@@ -335,6 +328,30 @@ private:
   static void generate_graph(const std::string& dot_file, 
                              const std::string& graph_name);
 }; 
+
+/* Equality comparison between two trees. */
+template <typename Key, typename Compare>
+bool operator==(const rbtree<Key, Compare>& lhs, const rbtree<Key, Compare>& rhs) {
+
+  return (lhs.size() == rhs.size()) 
+       && std::equal(lhs.begin(), lhs.end(), rhs.begin());
+}
+
+/* Equality comparison betweeb tree and initilizer_list. */
+template <typename Key, typename Compare>
+bool operator==(const rbtree<Key, Compare>& lhs, const std::initializer_list<Key>& rhs) {
+
+  return (lhs.size() == rhs.size()) 
+       && std::equal(lhs.begin(), lhs.end(), rhs.begin());
+}
+
+/* Equality comparison betweeb tree and initilizer_list. */
+template <typename Key, typename Compare>
+bool operator==(const std::initializer_list<Key>& lhs, const rbtree<Key, Compare>& rhs) {
+
+  return (lhs.size() == rhs.size()) 
+       && std::equal(lhs.begin(), lhs.end(), rhs.begin());
+}
 
 template <typename Key, typename Compare>
 void rbtree<Key, Compare>::swap_side_nodes(rbtree& that) noexcept {

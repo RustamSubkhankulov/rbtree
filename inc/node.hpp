@@ -347,6 +347,9 @@ public:
   static subtree_copy_t copy_subtree(const subtree_info_t subtree_info, 
                                      const      end_node* end_node_ptr);
 
+  static void copy_subtree_impl(subtree_copy_t& subtree_copy, const subtree_info_t subtree_info, 
+                                                                   const end_node* end_node_ptr);
+
   /* Stitch each node in subtree. */
   static void stitch_subtree(node_t* subtree) noexcept;
 
@@ -393,6 +396,21 @@ node_t<Key>::copy_subtree(const subtree_info_t subtree_info, const end_node* end
     return subtree_copy;
   }
 
+  try {
+    copy_subtree_impl(subtree_copy, subtree_info, end_node_ptr);
+
+  } catch (...) {
+    node_t::free_subtree(subtree_copy.root, end_node_ptr);
+    throw;
+  }
+
+  return subtree_copy;
+}
+
+template <typename Key>
+void node_t<Key>::copy_subtree_impl(subtree_copy_t& subtree_copy, const subtree_info_t subtree_info, 
+                                                                  const end_node* end_node_ptr) {
+
   const node_t* subtree = subtree_info.root;
   node_t* copy = subtree_copy.root = new node_t(*subtree), *child;
   end_node* parent;
@@ -402,26 +420,14 @@ node_t<Key>::copy_subtree(const subtree_info_t subtree_info, const end_node* end
     if (subtree->has_left() && !copy->has_left()) {
 
       subtree = subtree->get_left_unsafe();
-      if ((child = new(std::nothrow) node_t(*subtree)) == nullptr) {
-
-        node_t::free_subtree(subtree_copy.root, end_node_ptr);
-        throw std::bad_alloc();
-      }
-
-      copy->tie_left(child);
-      copy = child;
+      copy->tie_left(new node_t(*subtree));
+      copy = copy->get_left_unsafe();
 
     } else if (subtree->has_right() && !copy->has_right()) {
 
       subtree = subtree->get_right_unsafe();
-      if ((child = new(std::nothrow) node_t(*subtree)) == nullptr) {
-
-        node_t::free_subtree(subtree_copy.root, end_node_ptr);
-        throw std::bad_alloc();
-      }
-
-      copy->tie_right(child);      
-      copy = child;
+      copy->tie_right(new node_t(*subtree));      
+      copy = copy->get_right_unsafe();
 
     } else {
 
@@ -439,8 +445,6 @@ node_t<Key>::copy_subtree(const subtree_info_t subtree_info, const end_node* end
     }
 
   } while (parent != end_node_ptr);
-
-  return subtree_copy;
 }
 
 template <typename Key>
