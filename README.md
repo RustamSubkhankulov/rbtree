@@ -32,7 +32,7 @@ Available test options are:
   Query testings tests queries methods, that are used in interactive testing mode.
 
 ### Debug features
-1. Graphical dump. To make graphical dump, use <code>graph_dump()</code> RBTREE::rbtree method. This method takes one argument - name of the output image file, relative to the current working directory.
+1. Graphical dump. To make graphical dump, use <code>graph_dump()</code> RBTREE::rbtree method. This method is overloaded. One its overlod takes one argument - name of the output image file, relative to the current working directory, another - std::basic_ostream, where dot graphical dump will be written to.
 2. Debug compilation flags. Enabled by option <code>'DEBUG_GLAGS'</code>. Enables additional warnings during compilation. Forcefully disabled with <code>CMAKE_BUILD_TYPE=RELEASE</code>.
 
 ### Performance comparison
