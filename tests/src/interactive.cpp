@@ -100,6 +100,7 @@ int main() {
 
         /* Perform query. */
         query_insert(set, key);
+
         break;
       }
 

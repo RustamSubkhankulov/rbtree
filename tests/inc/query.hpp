@@ -22,22 +22,27 @@ void query_insert(Set<Key>& set, const Key& key) {
   set.insert(key);
 }
 
-/* q-query implementation */
-template <template<typename...> class Set, typename Key>
-typename Set<Key>::difference_type 
-query_distance(Set<Key>& set, typename Set<Key>::const_iterator first, 
-                                typename Set<Key>::const_iterator second) {
-
-  auto comp = set.key_comp();
-  return comp(*first, *second)? std::distance(first, second) : 0;
-}
-
 template <template<typename...> class Set, typename Key>
 typename Set<Key>::difference_type 
 query_distance(Set<Key>& set, const Key& first, const Key& second) {
 
+  std::cerr << "first " << first << " second " << second << "\n";
+
   auto comp = set.key_comp();
-  return comp(first, second)? std::distance(set.find(first), set.find(second)) : 0;
+
+  if (comp(second, first)) {
+    return 0;
+  }
+
+  auto it_first = set.lower_bound(first), it_second = set.lower_bound(second);
+  
+  std::cerr << "*first " << *it_first << " *second " << *it_second << "\n";
+
+  auto res = std::distance(it_first, it_second);
+
+  std::cerr << "res " << res << "\n";
+
+  return res;
 }
 
 /* fast q-query implementation using distance() method for RBTREE::rbtree. */

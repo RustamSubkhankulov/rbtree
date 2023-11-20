@@ -91,7 +91,7 @@ public:
   }
 
   /* Make thread to prev node. */
-  node_t* stitch_left(end_node_t* nd) {
+  node_t* stitch_left(end_node_t* nd) noexcept {
 
     node_t* prev = left;
 
@@ -102,7 +102,7 @@ public:
   }
 
   /* Check whether left child is present. */
-  bool has_left() const { 
+  bool has_left() const noexcept { 
     return (!left_is_thread) && (left != nullptr); 
   }
 
@@ -245,7 +245,7 @@ public:
   using end_node::has_left;
 
   /* Check whether right child is present. */
-  bool has_right() const { 
+  bool has_right() const noexcept { 
     return (!right_is_thread) && (right != nullptr);
   }
 
@@ -277,9 +277,6 @@ public:
    */
   void paint (enum color clr) { color = clr; }
 
-  /* Set pointer to left child and set its parent to this. */
-  using end_node::tie_left;
-
   /* Set pointer to right child and set its parent to this. */
   node_t* tie_right(node_t* child) noexcept {
 
@@ -299,7 +296,7 @@ public:
   using end_node::stitch_left;
 
   /* Make thread to next node. */
-  node_t* stitch_right(end_node* nd) {
+  node_t* stitch_right(end_node* nd) noexcept {
 
     node_t* prev = right;
 
@@ -364,22 +361,22 @@ public:
   static void stitch_subtree(node_t* subtree) noexcept;
 
   /* Free given subtree. */
-  static void free_subtree(node_t* subtree, const end_node* end_node_ptr);
+  static void free_subtree(node_t* subtree, const end_node* end_node_ptr) noexcept;
 
   /* Get previous node. */
-  const end_node* get_prev() const;
-  end_node* get_prev();
+  const end_node* get_prev() const noexcept;
+  end_node* get_prev() noexcept;
 
   /* Get next node. */
-  const end_node* get_next() const;
-  end_node* get_next();
+  const end_node* get_next() const noexcept;
+  end_node* get_next() noexcept;
 
   /* 
    * Make stitches to next and previous nodes.
    * Stitches are only made if pointer to left or right elements 
    * accrodingly is nullptr - no such descnedant. 
    */
-  void stitch();
+  void stitch() noexcept;
 
   /* Validate node. Call function below. */
   bool debug_validate() const;
@@ -489,7 +486,7 @@ void node_t<Key>::stitch_subtree(node_t* subtree) noexcept {
 }
 
 template <typename Key>
-void node_t<Key>::free_subtree(node_t* subtree, const end_node* end_node_ptr) {
+void node_t<Key>::free_subtree(node_t* subtree, const end_node* end_node_ptr) noexcept {
 
   if (subtree == nullptr) {
     return;
@@ -570,7 +567,7 @@ const node_t<Key>* node_t<Key>::get_rightmost_desc(const node_t* cur) {
 
 template <typename Key>
 const typename node_t<Key>::end_node* 
-node_t<Key>::get_prev() const {
+node_t<Key>::get_prev() const noexcept {
 
   if (has_left()) {
     return node_t::get_rightmost_desc(left);
@@ -598,7 +595,7 @@ node_t<Key>::get_prev() const {
 
 template <typename Key>
 typename node_t<Key>::end_node* 
-node_t<Key>::get_prev() {
+node_t<Key>::get_prev() noexcept {
 
   if (has_left()) {
     return node_t::get_rightmost_desc(left);
@@ -626,7 +623,7 @@ node_t<Key>::get_prev() {
 
 template <typename Key>
 const typename node_t<Key>::end_node* 
-node_t<Key>::get_next() const {
+node_t<Key>::get_next() const noexcept {
 
   if (has_right()) {
     return node_t::get_leftmost_desc(right);
@@ -654,7 +651,7 @@ node_t<Key>::get_next() const {
 
 template <typename Key>
 typename node_t<Key>::end_node* 
-node_t<Key>::get_next() {
+node_t<Key>::get_next() noexcept {
 
   if (has_right()) {
     return node_t::get_leftmost_desc(right);
@@ -681,7 +678,7 @@ node_t<Key>::get_next() {
 }
 
 template <typename Key>
-void node_t<Key>::stitch() {
+void node_t<Key>::stitch() noexcept {
 
   if (!has_left()) {
     stitch_left(get_prev());
