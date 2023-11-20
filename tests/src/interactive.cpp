@@ -59,18 +59,10 @@ int main() {
 
   /* Construct empty tree - RBTREE::rbtree. */
   #if defined(STDSET)
-    std::cerr << "std::set \n";
     std::set<int> set;
   #else 
-    std::cerr << "RBTREE::rbtere \n";
     RBTREE:rbtree<int> set;
   #endif 
-
-  #if defined(STDDIST) || defined(STDSET)
-    std::cerr << "slow \n";
-  #else 
-    std::cerr << "fast \n";
-  #endif
 
   /* Read sequence of queries. */
   query_seq q_seq;
@@ -107,7 +99,7 @@ int main() {
         }
 
         /* Perform query. */
-        query_k_insert(set, key);
+        query_insert(set, key);
         break;
       }
 
@@ -124,9 +116,9 @@ int main() {
 
         /* Perform query and write out result. */
         #if defined(STDDIST) || defined(STDSET)
-          res = query_q_distance(set, first, second);
+          res = query_distance(set, first, second);
         #else 
-          res = query_q_distance_fast(set, first, second);
+          res = query_distance_fast(set, first, second);
         #endif
 
         results.push_back(res);        
@@ -257,3 +249,4 @@ bool query_seq::get_query_arg(int& arg) {
 #endif
 
 }; /* Anonymous namespace. */
+  

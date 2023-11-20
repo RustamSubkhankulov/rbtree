@@ -16,62 +16,41 @@ enum class query_type : char {
   Q_DISTANCE = 'q'
 };
 
-/* k-query implementation for RBTREE::rbtree. */
-template <typename Key>
-void query_k_insert(RBTREE::rbtree<Key>& rbtree, const Key& key) {
-  rbtree.insert(key);
-}
-
-/* k-query implementation for std::set. */
-template <typename Key>
-void query_k_insert(std::set<int>& set, const Key& key) {
+/* k-query implementation */
+template <template<typename...> class Set, typename Key>
+void query_insert(Set<Key>& set, const Key& key) {
   set.insert(key);
 }
 
-/* q-query implementation using std::distance() for RBTREE::rbtree. */
-template <typename Key>
-typename RBTREE::rbtree<Key>::difference_type 
-query_q_distance(RBTREE::rbtree<Key>& rbtree, const Key& first, const Key& second) {
+/* q-query implementation */
+template <template<typename...> class Set, typename Key>
+typename Set<Key>::difference_type 
+query_distance(Set<Key>& set, typename Set<Key>::const_iterator first, 
+                                typename Set<Key>::const_iterator second) {
 
-  return std::distance(rbtree.find(first), rbtree.find(second));
+  auto comp = set.key_comp();
+  return comp(*first, *second)? std::distance(first, second) : 0;
 }
 
-template <typename Key>
-typename RBTREE::rbtree<Key>::difference_type 
-query_q_distance(RBTREE::rbtree<Key>& rbtree, typename RBTREE::rbtree<Key>::const_iterator first, 
-                                              typename RBTREE::rbtree<Key>::const_iterator second) {
+template <template<typename...> class Set, typename Key>
+typename Set<Key>::difference_type 
+query_distance(Set<Key>& set, const Key& first, const Key& second) {
 
-  return std::distance(first, second);
-}
-
-/* q-query implementation using std::distance() for std::set. */
-template <typename Key>
-typename RBTREE::rbtree<Key>::difference_type 
-query_q_distance(std::set<int>& set, const Key& first, const Key& second) {
-
-  return std::distance(set.find(first), set.find(second));
-}
-
-template <typename Key>
-typename RBTREE::rbtree<Key>::difference_type 
-query_q_distance(std::set<int>& set, typename std::set<int>::const_iterator first,
-                                     typename std::set<int>::const_iterator second) {
-
-  return std::distance(first, second);
+  auto comp = set.key_comp();
+  return comp(first, second)? std::distance(set.find(first), set.find(second)) : 0;
 }
 
 /* fast q-query implementation using distance() method for RBTREE::rbtree. */
 template <typename Key>
 typename RBTREE::rbtree<Key>::difference_type 
-query_q_distance_fast(RBTREE::rbtree<Key>& rbtree, const Key& first, const Key& second) {
+query_distance_fast(RBTREE::rbtree<Key>& rbtree, const Key& first, const Key& second) {
 
-  // return rbtree.distance(rbtree.find(first), rbtree.find(second));
   return rbtree.distance(first, second);
 }
 
 template <typename Key>
 typename RBTREE::rbtree<Key>::difference_type 
-query_q_distance_fast(RBTREE::rbtree<Key>& rbtree, typename RBTREE::rbtree<Key>::const_iterator first, 
+query_distance_fast(RBTREE::rbtree<Key>& rbtree, typename RBTREE::rbtree<Key>::const_iterator first, 
                                                    typename RBTREE::rbtree<Key>::const_iterator second) {
 
   return rbtree.distance(first, second);
