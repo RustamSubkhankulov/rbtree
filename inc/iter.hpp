@@ -38,24 +38,24 @@ public:
   : node_ptr_(node_ptr) {}
 
   /* Implicit conversion to bool. */
-  operator bool() const noexcept { 
+  operator bool() const { 
     return static_cast<bool>(node_ptr_); 
   }
 
-  reference operator*() const noexcept { return static_cast<const node*>(node_ptr_)->value; }
-  pointer operator->() const noexcept { return &static_cast<const node*>(node_ptr_)->value; }
+  reference operator*() const { return static_cast<const node*>(node_ptr_)->value; }
+  pointer operator->() const { return &static_cast<const node*>(node_ptr_)->value; }
 
-  const_iter& operator++() noexcept;
-  const_iter& operator--() noexcept;
+  const_iter& operator++();
+  const_iter& operator--();
 
-  const_iter operator++(int) noexcept { auto temp(*this); operator++(); return temp; }
-  const_iter operator--(int) noexcept { auto temp(*this); operator--(); return temp; }
+  const_iter operator++(int) { auto temp(*this); operator++(); return temp; }
+  const_iter operator--(int) { auto temp(*this); operator--(); return temp; }
 
-  friend bool operator==(const const_iter& lhs, const const_iter& rhs) noexcept {
+  friend bool operator==(const const_iter& lhs, const const_iter& rhs) {
     return (lhs.node_ptr_ == rhs.node_ptr_);
   }
 
-  friend bool operator!=(const const_iter& lhs, const const_iter& rhs) noexcept {
+  friend bool operator!=(const const_iter& lhs, const const_iter& rhs) {
     return (lhs.node_ptr_ != rhs.node_ptr_);
   }
 
@@ -64,7 +64,7 @@ public:
 };
 
 template <typename Node>
-const_iter<Node>& const_iter<Node>::operator++() noexcept { 
+const_iter<Node>& const_iter<Node>::operator++() { 
 
   auto nd = static_cast<const node*>(node_ptr_);
   node* next = nd->get_right_thread();
@@ -79,7 +79,7 @@ const_iter<Node>& const_iter<Node>::operator++() noexcept {
 }
 
 template <typename Node>
-const_iter<Node>& const_iter<Node>::operator--() noexcept { 
+const_iter<Node>& const_iter<Node>::operator--() { 
   
   auto nd = static_cast<const node*>(node_ptr_);
   node* prev = nd->get_left_thread();

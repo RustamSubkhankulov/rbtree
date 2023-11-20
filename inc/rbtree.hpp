@@ -65,7 +65,7 @@ private:
   end_node* end_node_ptr() { return root.end_node_ptr(); }
 
   /* Checks wether given node is root. */
-  bool is_root(const node* node) const noexcept { return (node == root.get()); }
+  bool is_root(const node* node) const { return (node == root.get()); }
 
 public:
   /* Bidirectional iterator. */
@@ -105,7 +105,7 @@ public:
 
   /* Move ctor. */
   rbtree(rbtree&& that)
-  noexcept(std::is_nothrow_move_constructible_v<node> &&
+  noexcept(std::is_nothrow_move_constructible_v<root_type> &&
            std::is_nothrow_move_constructible_v<Compare>)
   : root(std::move(that.root)),
     leftmost(std::exchange(that.leftmost, that.root.end_node_ptr())), 
@@ -129,8 +129,7 @@ public:
 
   /* Move assignment. */
   rbtree& operator=(rbtree&& that) 
-  noexcept(std::is_nothrow_swappable_v<node> &&
-           std::is_nothrow_swappable_v<Compare>) {
+  noexcept(noexcept(swap(std::declval<rbtree&>()))) {
 
     swap(that);
     return *this;
@@ -164,7 +163,7 @@ public:
 
   /* Swap contents of two trees. No copying of elements are performed. */
   void swap(rbtree& that) 
-  noexcept(std::is_nothrow_swappable_v<node> &&
+  noexcept(std::is_nothrow_swappable_v<root_type> &&
            std::is_nothrow_swappable_v<Compare>) {
 
     std::swap(root, that.root);
@@ -173,11 +172,11 @@ public:
   }
 
   /* Find element with key equivalent to a given argument. */
-  const_iterator find (const key_type& key) const noexcept {
+  const_iterator find (const key_type& key) const {
     return const_iterator(find_equiv_node(root.get(), key));
   }
   /* Check wether element with key equivalent to a given is in the tree. */
-  bool contains(const key_type& key) const noexcept {
+  bool contains(const key_type& key) const {
     return (find_equiv_node(root.get(), key) != end_node_ptr());
   }
 
@@ -188,25 +187,25 @@ public:
    */
 
   /* Iterator to the first element. */
-  const_iterator cbegin() const noexcept { return const_iterator(leftmost); }
-  const_iterator begin()  const noexcept { return cbegin(); }
+  const_iterator cbegin() const { return const_iterator(leftmost); }
+  const_iterator begin()  const { return cbegin(); }
 
   /* Reverise iterator to the first element. */
-  const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
-  const_reverse_iterator rbegin()  const noexcept { return crbegin();  }
+  const_reverse_iterator crbegin() const { return const_reverse_iterator(cend()); }
+  const_reverse_iterator rbegin()  const { return crbegin();  }
 
   /* Past-end iterator. */
-  const_iterator cend() const noexcept { return const_iterator(end_node_ptr()); }
-  const_iterator end()  const noexcept { return cend(); }
+  const_iterator cend() const { return const_iterator(end_node_ptr()); }
+  const_iterator end()  const { return cend(); }
 
   /* Reverse past-end iterator. */
-  const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
-  const_reverse_iterator rend()  const noexcept { return crend();  }
+  const_reverse_iterator crend() const { return const_reverse_iterator(cbegin()); }
+  const_reverse_iterator rend()  const { return crend();  }
 
   /* Checks whether the container is empty */
-  bool empty() const noexcept { return (root.get() == nullptr); }
+  bool empty() const { return (root.get() == nullptr); }
   /* Returns the number of elements */
-  size_type size() const noexcept { 
+  size_type size() const { 
     return (empty())? 0 : root.get()->size; 
   }
 
@@ -215,21 +214,21 @@ public:
 
   /* Distance between two nodes, defined by keys. */
 
-  difference_type distance(const_iterator first, const_iterator second) const noexcept {
+  difference_type distance(const_iterator first, const_iterator second) const {
     return less_than(*second) - less_than(*first);
   }
 
-  difference_type distance(const key_type& first, const key_type& second) const noexcept {
+  difference_type distance(const key_type& first, const key_type& second) const {
     return less_than(second) - less_than(first);
   }
 
   /* Returns an iterator to the first element not less than the given key */
-  const_iterator lower_bound(const Key& key) const noexcept {
+  const_iterator lower_bound(const Key& key) const {
     return const_iterator(find_lower_bound_node(root.get(), key));
   }
 
   /* Returns an iterator to the first element greater than the given key */
-  const_iterator upper_bound(const Key& key) const noexcept {
+  const_iterator upper_bound(const Key& key) const {
     return const_iterator(find_upper_bound_node(root.get(), key));
   }
 
@@ -275,57 +274,57 @@ private:
    *Link 'rhs' node into 'lhs' place in the tree. 
    * Does not change its children
    */
-  void transplant(node* lhs, node* rhs) noexcept;
+  void transplant(node* lhs, node* rhs);
 
   /* Rotation methods for rebalancing. */
-  void right_rotate(node* subtree_root) noexcept;
-  void left_rotate (node* subtree_root) noexcept;
+  void right_rotate(node* subtree_root);
+  void left_rotate (node* subtree_root);
 
   /* Insert node and perform fixes to maintain invariants of the RB-tree. */
   bool insert_node(node* inserting);  
   /* Insert node into a tree just like in a regular BST tree. */
-  bool insert_node_bst(node* subtree_root, node* inserting) noexcept;
+  bool insert_node_bst(node* subtree_root, node* inserting);
   
   /* Fixing functions used on insertion. */
-  void insert_rb_fix(node* inserted) noexcept;
-  node* parent_grand_recolor(node* parent) noexcept;
-  node* uncle_parent_grand_recolor(node* uncle, node* parent) noexcept;
+  void insert_rb_fix(node* inserted);
+  node* parent_grand_recolor(node* parent);
+  node* uncle_parent_grand_recolor(node* uncle, node* parent);
 
   /* Delete given node and perform fixes to maintain invariants of the RB-tree. */
   void delete_node(node* deleting);  
 
   /* Fixing functions used on deletion. */
-  node* delete_rb_fix(node* erased) noexcept;  
+  node* delete_rb_fix(node* erased);  
 
   /* Update stitches on deletion. */
-  void update_stitches(end_node* prev, end_node* next) noexcept;
-  void update_prev(end_node* prev) noexcept;
-  void update_next(end_node* next) noexcept;
+  void update_stitches(end_node* prev, end_node* next);
+  void update_prev(end_node* prev);
+  void update_next(end_node* next);
   
   /* Helper rebalancing functions. */
-  std::pair<node*, node*> get_y_and_its_decs(node* y) noexcept;
-  void  delete_rb_rebalance(node* x, node* parent_of_x) noexcept;
-  node* delete_rb_rebalance_w_is_red(node* w, bool x_on_left, node* parent_of_x) noexcept;
-  void  delete_rb_update_leftmost(node* z, node* x) noexcept;
-  void  delete_rb_update_rightmost(node* z, node* x) noexcept;
+  std::pair<node*, node*> get_y_and_its_decs(node* y);
+  void  delete_rb_rebalance(node* x, node* parent_of_x);
+  node* delete_rb_rebalance_w_is_red(node* w, bool x_on_left, node* parent_of_x);
+  void  delete_rb_update_leftmost(node* z, node* x);
+  void  delete_rb_update_rightmost(node* z, node* x);
 
   /* Helper function for finding nodes. */
-  const end_node* find_equiv_node(const node* subtree_root, key_type key) const noexcept;
+  const end_node* find_equiv_node(const node* subtree_root, key_type key) const;
 
-  const end_node* find_lower_bound_node(const node* subtree_root, key_type key) const noexcept;
-  const end_node* find_upper_bound_node(const node* subtree_root, key_type key) const noexcept;
+  const end_node* find_lower_bound_node(const node* subtree_root, key_type key) const;
+  const end_node* find_upper_bound_node(const node* subtree_root, key_type key) const;
   
   /* Increase subtree size for each node in route from nd to root by 1. */
-  void incr_subtree_sizes(end_node* nd) noexcept;
+  void incr_subtree_sizes(end_node* nd);
 
   /* Decrease subtree size for each node in route from nd to root by 1. */
-  void decr_subtree_sizes(end_node* nd) noexcept;
+  void decr_subtree_sizes(end_node* nd);
 
   /* Get number of element smaller thatn given. */
-  size_type less_than(const key_type& key) const noexcept;
+  size_type less_than(const key_type& key) const;
 
   /* Validate tree - checks its rRB-properties. */
-  bool debug_validate() const noexcept;
+  bool debug_validate() const;
 
   /* Helper function for graphical dump. */
   template <typename CharT>
@@ -519,7 +518,7 @@ void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
 
 template <typename Key, typename Compare>
 const typename rbtree<Key, Compare>::end_node* 
-rbtree<Key, Compare>::find_equiv_node(const node* subtree_root, key_type key) const noexcept {
+rbtree<Key, Compare>::find_equiv_node(const node* subtree_root, key_type key) const {
 
   while (subtree_root != nullptr) {
 
@@ -540,7 +539,7 @@ rbtree<Key, Compare>::find_equiv_node(const node* subtree_root, key_type key) co
 template <typename Key, typename Compare>
 const typename rbtree<Key, Compare>::end_node* 
 rbtree<Key, Compare>::find_lower_bound_node(const node* subtree_root, 
-                                                        key_type key) const noexcept {
+                                                        key_type key) const {
   
   const end_node* res = end_node_ptr();
   while (subtree_root != nullptr) {
@@ -558,7 +557,7 @@ rbtree<Key, Compare>::find_lower_bound_node(const node* subtree_root,
 template <typename Key, typename Compare>
 const typename rbtree<Key, Compare>::end_node* 
 rbtree<Key, Compare>::find_upper_bound_node(const node* subtree_root, 
-                                                        key_type key) const noexcept {
+                                                        key_type key) const {
 
   const end_node* res = end_node_ptr();
   while (subtree_root != nullptr) {
@@ -574,7 +573,7 @@ rbtree<Key, Compare>::find_upper_bound_node(const node* subtree_root,
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::transplant(node* u, node* v) noexcept {
+void rbtree<Key, Compare>::transplant(node* u, node* v) {
 
   if (is_root(u)) {
     root.set(v);
@@ -588,7 +587,7 @@ void rbtree<Key, Compare>::transplant(node* u, node* v) noexcept {
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
+void rbtree<Key, Compare>::right_rotate(node* subtree_root) {
 
   if (subtree_root == nullptr || !subtree_root->has_left())
     return;
@@ -625,7 +624,7 @@ void rbtree<Key, Compare>::right_rotate(node* subtree_root) noexcept {
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::left_rotate(node* subtree_root) noexcept {
+void rbtree<Key, Compare>::left_rotate(node* subtree_root) {
 
   if (subtree_root == nullptr || !subtree_root->has_right())
     return;
@@ -698,7 +697,7 @@ bool rbtree<Key, Compare>::insert_node(node* inserting) {
 
 template <typename Key, typename Compare>
 typename rbtree<Key, Compare>::node* 
-rbtree<Key, Compare>::parent_grand_recolor(node* parent) noexcept {
+rbtree<Key, Compare>::parent_grand_recolor(node* parent) {
 
   using color_t = enum node::color;
 
@@ -714,7 +713,7 @@ rbtree<Key, Compare>::parent_grand_recolor(node* parent) noexcept {
 
 template <typename Key, typename Compare>
 typename rbtree<Key, Compare>::node* 
-rbtree<Key, Compare>::uncle_parent_grand_recolor(node* uncle, node* parent) noexcept {
+rbtree<Key, Compare>::uncle_parent_grand_recolor(node* uncle, node* parent) {
 
   using color_t = enum node::color;
 
@@ -730,7 +729,7 @@ rbtree<Key, Compare>::uncle_parent_grand_recolor(node* uncle, node* parent) noex
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::insert_rb_fix(node* new_node) noexcept {
+void rbtree<Key, Compare>::insert_rb_fix(node* new_node) {
 
   node *uncle, *parent = new_node->parent();
 
@@ -784,7 +783,7 @@ void rbtree<Key, Compare>::insert_rb_fix(node* new_node) noexcept {
 }
 
 template <typename Key, typename Compare>
-bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) noexcept {
+bool rbtree<Key, Compare>::insert_node_bst(node* subtree_root, node* inserting) {
 
   node* current = subtree_root;
   node* parent = subtree_root->parent();
@@ -835,7 +834,7 @@ void rbtree<Key, Compare>::delete_node(node* deleting) {
 template <typename Key, typename Compare>
 std::pair<typename rbtree<Key, Compare>::node*, 
           typename rbtree<Key, Compare>::node*>
-rbtree<Key, Compare>::get_y_and_its_decs(node* y) noexcept {
+rbtree<Key, Compare>::get_y_and_its_decs(node* y) {
 
   if (!y->has_left()) {
     return std::make_pair(y, y->get_right());
@@ -856,7 +855,7 @@ rbtree<Key, Compare>::get_y_and_its_decs(node* y) noexcept {
 template <typename Key, typename Compare>
 typename rbtree<Key, Compare>::node* 
 rbtree<Key, Compare>::delete_rb_rebalance_w_is_red(node* w, bool x_on_left, 
-                                                         node* parent_of_x) noexcept {
+                                                         node* parent_of_x) {
 
   using color_t = enum node::color;
 
@@ -878,7 +877,7 @@ rbtree<Key, Compare>::delete_rb_rebalance_w_is_red(node* w, bool x_on_left,
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexcept {
+void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) {
 
   using color_t = enum node::color;
 
@@ -956,7 +955,7 @@ void rbtree<Key, Compare>::delete_rb_rebalance(node* x, node* parent_of_x) noexc
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::delete_rb_update_leftmost(node* z, node* x) noexcept {
+void rbtree<Key, Compare>::delete_rb_update_leftmost(node* z, node* x) {
 
   if (!z->has_right()) {
     
@@ -972,7 +971,7 @@ void rbtree<Key, Compare>::delete_rb_update_leftmost(node* z, node* x) noexcept 
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::delete_rb_update_rightmost(node* z, node* x) noexcept {
+void rbtree<Key, Compare>::delete_rb_update_rightmost(node* z, node* x) {
 
   if (!z->has_left()) {
     
@@ -988,14 +987,14 @@ void rbtree<Key, Compare>::delete_rb_update_rightmost(node* z, node* x) noexcept
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::update_stitches(end_node* prev, end_node* next) noexcept {
+void rbtree<Key, Compare>::update_stitches(end_node* prev, end_node* next) {
 
   update_prev(prev);
   update_next(next);
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::update_prev(end_node* prev) noexcept {
+void rbtree<Key, Compare>::update_prev(end_node* prev) {
 
   if (prev != end_node_ptr()) {
 
@@ -1007,7 +1006,7 @@ void rbtree<Key, Compare>::update_prev(end_node* prev) noexcept {
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::update_next(end_node* next) noexcept {
+void rbtree<Key, Compare>::update_next(end_node* next) {
 
   if (next != end_node_ptr()) {
     auto nd = static_cast<node*>(next);
@@ -1019,7 +1018,7 @@ void rbtree<Key, Compare>::update_next(end_node* next) noexcept {
 
 template <typename Key, typename Compare>
 typename rbtree<Key, Compare>::node*
-rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
+rbtree<Key, Compare>::delete_rb_fix(node* z) {
 
   auto next = z->get_next();
   auto prev = z->get_prev();
@@ -1087,7 +1086,7 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) noexcept {
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::incr_subtree_sizes(end_node* nd) noexcept {
+void rbtree<Key, Compare>::incr_subtree_sizes(end_node* nd) {
 
   if (nd == nullptr) {
     return;
@@ -1103,7 +1102,7 @@ void rbtree<Key, Compare>::incr_subtree_sizes(end_node* nd) noexcept {
 }
 
 template <typename Key, typename Compare>
-void rbtree<Key, Compare>::decr_subtree_sizes(end_node* nd) noexcept {
+void rbtree<Key, Compare>::decr_subtree_sizes(end_node* nd) {
 
   if (nd == nullptr) {
     return;
@@ -1120,7 +1119,7 @@ void rbtree<Key, Compare>::decr_subtree_sizes(end_node* nd) noexcept {
 
 template <typename Key, typename Compare>
 typename rbtree<Key, Compare>::size_type 
-rbtree<Key, Compare>::less_than(const key_type& key) const noexcept {
+rbtree<Key, Compare>::less_than(const key_type& key) const {
 
   const end_node* current = find_lower_bound_node(root.get(), key);
 
@@ -1144,7 +1143,7 @@ rbtree<Key, Compare>::less_than(const key_type& key) const noexcept {
 }
 
 template <typename Key, typename Compare>
-bool rbtree<Key, Compare>::debug_validate() const noexcept {
+bool rbtree<Key, Compare>::debug_validate() const {
 
   const node* root_node = root.get();
 
@@ -1253,16 +1252,3 @@ template <typename Key, typename Compare>
   }
 
 }; /* namespace RBTREE */
-
-namespace std {
-
-template <typename Key, typename Compare>
-constexpr void swap(::RBTREE::rbtree<Key, Compare>& lhs, 
-                    ::RBTREE::rbtree<Key, Compare>& rhs) 
-noexcept(std::is_nothrow_move_constructible_v<::RBTREE::rbtree<Key, Compare>> && 
-         std::is_nothrow_move_assignable_v<::RBTREE::rbtree<Key, Compare>>) {
-
-  lhs.swap(rhs);
-}
-
-}; /* namespace std */

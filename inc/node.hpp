@@ -45,6 +45,7 @@ public:
     left_is_thread(std::exchange(that.left_is_thread, false)) {} 
 
   end_node_t& operator=(end_node_t&& that) noexcept {
+
     std::swap(left, that.left);
     std::swap(left_is_thread, that.left_is_thread);
     return *this;
@@ -58,17 +59,17 @@ public:
   }
 
   /* Get link to prev node if it is present, otherwise nullptr. */
-  node_t* get_left_thread() const noexcept {
+  node_t* get_left_thread() const {
     return (left_is_thread)? left : nullptr;
   }
 
   /* Get pointer to left node - child or prev. */
-  node_t* get_left_unsafe() const noexcept {
+  node_t* get_left_unsafe() const {
     return left;
   }
 
   /* Set pointer to left child. */
-  void set_left(node_t* nd) noexcept {
+  void set_left(node_t* nd) {
 
     left_is_thread = false;
     left = nd;
@@ -90,7 +91,7 @@ public:
   }
 
   /* Make thread to prev node. */
-  node_t* stitch_left(end_node_t* nd) noexcept {
+  node_t* stitch_left(end_node_t* nd) {
 
     node_t* prev = left;
 
@@ -101,12 +102,12 @@ public:
   }
 
   /* Check whether left child is present. */
-  bool has_left() const noexcept { 
+  bool has_left() const { 
     return (!left_is_thread) && (left != nullptr); 
   }
 
   /* Check whether thread to prev node is present. */
-  bool is_thread_left() const noexcept {
+  bool is_thread_left() const {
     return left_is_thread;
   }
 
@@ -173,7 +174,7 @@ public:
     right(std::exchange(that.right, nullptr)),
     parent_(std::exchange(that.parent_, nullptr)) {}
 
-  node_t& operator=(node_t&& that) 
+  void swap(node_t& that)
   noexcept(std::is_nothrow_swappable_v<key_type>) {
 
     std::swap(static_cast<end_node>(*this), static_cast<end_node>(that));
@@ -183,7 +184,13 @@ public:
     std::swap(right_is_thread, that.right_is_thread);
     std::swap(right, that.right);
     std::swap(parent_, that.parent_);
+  }
 
+  node_t& operator=(node_t&& that) 
+  noexcept(noexcept(swap(std::declval<node_t&>()))) {
+
+    swap(that);
+    return *this;
   }
 
   /* Construct node that holds copy of key. */
@@ -201,7 +208,7 @@ public:
   using end_node::get_left_unsafe;
 
   /* Get right child if it is present, otherwise nullptr. */
-  node_t* get_right() const { 
+  node_t* get_right() const noexcept { 
     return (right_is_thread)? nullptr : right; 
   }
 
@@ -219,7 +226,7 @@ public:
   using end_node::set_left;
 
   /* Set pointer to right child. */
-  void set_right(node_t* nd) noexcept {
+  void set_right(node_t* nd) {
 
     right_is_thread = false;
     right = nd;
@@ -232,13 +239,13 @@ public:
   /* Set parent node using end_node pointer. */
   void set_parent(end_node* parent) { parent_ = parent; }
 
-  bool is_leaf() const noexcept { return ((left == nullptr) && (right == nullptr));}
+  bool is_leaf() const { return ((left == nullptr) && (right == nullptr));}
 
   /* Check whether left child is present. */
   using end_node::has_left;
 
   /* Check whether right child is present. */
-  bool has_right() const noexcept { 
+  bool has_right() const { 
     return (!right_is_thread) && (right != nullptr);
   }
 
@@ -246,12 +253,12 @@ public:
   using end_node::is_thread_left;
 
   /* Check whether thread to next node is present. */
-  bool is_thread_right() const noexcept {
+  bool is_thread_right() const {
     return right_is_thread;
   }
 
-  bool is_red() const noexcept { return (color == color::RED); }
-  bool is_black() const noexcept { return (color == color::BLACK); }
+  bool is_red() const { return (color == color::RED); }
+  bool is_black() const { return (color == color::BLACK); }
 
   /* 
    * NOTE: nullptr node is also a black one. 
@@ -259,8 +266,8 @@ public:
    * outstanding ones so it will be easier to check whether pointer 
    * points to black node or not without additional check for pointer not to be nullptr.
    */
-  static bool is_red  (const node_t* nd) noexcept { return (nd != nullptr && nd->is_red()); }
-  static bool is_black(const node_t* nd) noexcept { return (nd == nullptr || nd->is_black()); }
+  static bool is_red  (const node_t* nd) { return (nd != nullptr && nd->is_red()); }
+  static bool is_black(const node_t* nd) { return (nd == nullptr || nd->is_black()); }
 
   /* 
    * paint() method so no need to write 'color' 
@@ -268,7 +275,10 @@ public:
    * node_t->color = node_t::color::BLACK
    * we can just write: 'node_t->paint(node_t::color::BLACK)' instead. 
    */
-  void paint (enum color clr) noexcept { color = clr; }
+  void paint (enum color clr) { color = clr; }
+
+  /* Set pointer to left child and set its parent to this. */
+  using end_node::tie_left;
 
   /* Set pointer to right child and set its parent to this. */
   node_t* tie_right(node_t* child) noexcept {
@@ -289,7 +299,7 @@ public:
   using end_node::stitch_left;
 
   /* Make thread to next node. */
-  node_t* stitch_right(end_node* nd) noexcept {
+  node_t* stitch_right(end_node* nd) {
 
     node_t* prev = right;
 
@@ -299,31 +309,31 @@ public:
     return prev;
   }
 
-  bool on_left() const noexcept {
+  bool on_left() const {
     return (parent_ == nullptr)? false : this == parent_->get_left();
   }
 
-  bool on_right() const noexcept {
+  bool on_right() const {
     return (parent_ == nullptr)? false : this == parent()->get_right();
   }
 
-  node_t* sibling() const noexcept {
+  node_t* sibling() const {
     return (parent_ == nullptr)? nullptr : (on_left())? parent()->get_right() : parent_->get_left();
   }
 
-  node_t* uncle() const noexcept {
+  node_t* uncle() const {
     return (parent_ == nullptr)? nullptr : parent()->sibling();
   }
 
   /* Get smallest element in subtree. */
-  static const node_t* get_leftmost_desc (const node_t* subtree_root) noexcept;
-  static node_t* get_leftmost_desc (node_t* subtree_root) noexcept;
+  static const node_t* get_leftmost_desc (const node_t* subtree_root);
+  static node_t* get_leftmost_desc (node_t* subtree_root);
   
   /* Get greatest element in subtree. */
-  static const node_t* get_rightmost_desc(const node_t* subtree_root) noexcept;
-  static node_t* get_rightmost_desc(node_t* subtree_root) noexcept;
+  static const node_t* get_rightmost_desc(const node_t* subtree_root);
+  static node_t* get_rightmost_desc(node_t* subtree_root);
 
-  static size_type subtree_size(const node_t* subtree_root) noexcept {
+  static size_type subtree_size(const node_t* subtree_root) {
     return (subtree_root != nullptr)? subtree_root->size : 0;
   }
 
@@ -354,31 +364,31 @@ public:
   static void stitch_subtree(node_t* subtree) noexcept;
 
   /* Free given subtree. */
-  static void free_subtree(node_t* subtree, const end_node* end_node_ptr) noexcept;
+  static void free_subtree(node_t* subtree, const end_node* end_node_ptr);
 
   /* Get previous node. */
-  const end_node* get_prev() const noexcept;
-  end_node* get_prev() noexcept;
+  const end_node* get_prev() const;
+  end_node* get_prev();
 
   /* Get next node. */
-  const end_node* get_next() const noexcept;
-  end_node* get_next() noexcept;
+  const end_node* get_next() const;
+  end_node* get_next();
 
   /* 
    * Make stitches to next and previous nodes.
    * Stitches are only made if pointer to left or right elements 
    * accrodingly is nullptr - no such descnedant. 
    */
-  void stitch() noexcept;
+  void stitch();
 
   /* Validate node. Call function below. */
-  bool debug_validate() const noexcept;
+  bool debug_validate() const;
   
   /* Checks red-black tree properties of node. */
-  bool debug_validate_rb() const noexcept;
+  bool debug_validate_rb() const;
 
   /* Checks subtree sizes of tree. */
-  bool debug_validate_size() const noexcept;
+  bool debug_validate_size() const;
 
   /* Helper functions used for graphical dump of the tree. */
   template <typename CharT>
@@ -479,7 +489,7 @@ void node_t<Key>::stitch_subtree(node_t* subtree) noexcept {
 }
 
 template <typename Key>
-void node_t<Key>::free_subtree(node_t* subtree, const end_node* end_node_ptr) noexcept {
+void node_t<Key>::free_subtree(node_t* subtree, const end_node* end_node_ptr) {
 
   if (subtree == nullptr) {
     return;
@@ -519,7 +529,7 @@ void node_t<Key>::free_subtree(node_t* subtree, const end_node* end_node_ptr) no
 }
 
 template <typename Key>
-node_t<Key>* node_t<Key>::get_leftmost_desc(node_t* cur) noexcept {
+node_t<Key>* node_t<Key>::get_leftmost_desc(node_t* cur) {
 
   while (cur != nullptr && cur->has_left()) {
     cur = cur->get_left();
@@ -529,7 +539,7 @@ node_t<Key>* node_t<Key>::get_leftmost_desc(node_t* cur) noexcept {
 }
 
 template <typename Key>
-const node_t<Key>* node_t<Key>::get_leftmost_desc(const node_t* cur) noexcept {
+const node_t<Key>* node_t<Key>::get_leftmost_desc(const node_t* cur) {
 
   while (cur != nullptr && cur->has_left()) {
     cur = cur->get_left();
@@ -539,7 +549,7 @@ const node_t<Key>* node_t<Key>::get_leftmost_desc(const node_t* cur) noexcept {
 }
 
 template <typename Key>
-node_t<Key>* node_t<Key>::get_rightmost_desc(node_t* cur) noexcept {
+node_t<Key>* node_t<Key>::get_rightmost_desc(node_t* cur) {
 
   while (cur != nullptr && cur->has_right()) {
     cur = cur->get_right();
@@ -549,7 +559,7 @@ node_t<Key>* node_t<Key>::get_rightmost_desc(node_t* cur) noexcept {
 }
 
 template <typename Key>
-const node_t<Key>* node_t<Key>::get_rightmost_desc(const node_t* cur) noexcept {
+const node_t<Key>* node_t<Key>::get_rightmost_desc(const node_t* cur) {
 
   while (cur != nullptr && cur->has_right()) {
     cur = cur->get_right();
@@ -560,7 +570,7 @@ const node_t<Key>* node_t<Key>::get_rightmost_desc(const node_t* cur) noexcept {
 
 template <typename Key>
 const typename node_t<Key>::end_node* 
-node_t<Key>::get_prev() const noexcept {
+node_t<Key>::get_prev() const {
 
   if (has_left()) {
     return node_t::get_rightmost_desc(left);
@@ -588,7 +598,7 @@ node_t<Key>::get_prev() const noexcept {
 
 template <typename Key>
 typename node_t<Key>::end_node* 
-node_t<Key>::get_prev() noexcept {
+node_t<Key>::get_prev() {
 
   if (has_left()) {
     return node_t::get_rightmost_desc(left);
@@ -616,7 +626,7 @@ node_t<Key>::get_prev() noexcept {
 
 template <typename Key>
 const typename node_t<Key>::end_node* 
-node_t<Key>::get_next() const noexcept {
+node_t<Key>::get_next() const {
 
   if (has_right()) {
     return node_t::get_leftmost_desc(right);
@@ -644,7 +654,7 @@ node_t<Key>::get_next() const noexcept {
 
 template <typename Key>
 typename node_t<Key>::end_node* 
-node_t<Key>::get_next() noexcept {
+node_t<Key>::get_next() {
 
   if (has_right()) {
     return node_t::get_leftmost_desc(right);
@@ -671,7 +681,7 @@ node_t<Key>::get_next() noexcept {
 }
 
 template <typename Key>
-void node_t<Key>::stitch() noexcept {
+void node_t<Key>::stitch() {
 
   if (!has_left()) {
     stitch_left(get_prev());
@@ -683,7 +693,7 @@ void node_t<Key>::stitch() noexcept {
 }
 
 template <typename Key>
-bool node_t<Key>::debug_validate_rb() const noexcept {
+bool node_t<Key>::debug_validate_rb() const {
 
   if (is_black()) {
     return true;
@@ -714,7 +724,7 @@ bool node_t<Key>::debug_validate_rb() const noexcept {
 }
 
 template <typename Key>
-bool node_t<Key>::debug_validate_size() const noexcept {
+bool node_t<Key>::debug_validate_size() const {
 
   size_t sz = 0;
 
@@ -749,7 +759,7 @@ bool node_t<Key>::debug_validate_size() const noexcept {
 }
 
 template <typename Key>
-bool node_t<Key>::debug_validate() const noexcept {
+bool node_t<Key>::debug_validate() const {
 
   auto rb_res   = debug_validate_rb();
   auto size_res = debug_validate_size();
@@ -771,29 +781,39 @@ private:
 
 public:
 
-  root(node* root = nullptr) noexcept {
-    end.tie_left(root);
+  root(node* root = nullptr) 
+  noexcept(std::is_nothrow_default_constructible_v<end_node> && 
+           noexcept(set(std::declval<node*>()))) {
+    set(root);
   }
 
   root(const root& that) = delete;
   root& operator=(const root& that) = delete;
 
-  root(root&& that) noexcept {
-    end.tie_left(that.end.tie_left(nullptr));
+  root(root&& that) 
+  noexcept(noexcept(set(std::declval<node*>()))) {
+    set(that.set(nullptr));
   }
 
-  root& operator=(root&& that) noexcept {
+  void swap(root& that) 
+  noexcept(noexcept(set(std::declval<node*>()))) {
+    set(that.set(end.get_left()));
+  }
+
+  root& operator=(root&& that) 
+  noexcept(noexcept(swap(std::declval<root&>()))) {
     
-    end.tie_left(that.end.tie_left(end.get_left()));
+    swap(that);
     return *this;
   }
 
-  void set(node* root) noexcept { 
-    end.tie_left(root);
+  node* set(node* root) 
+  noexcept(noexcept(std::declval<end_node>().tie_left(std::declval<node*>()))) { 
+    return end.tie_left(root);
   }
   
-  const node* get() const noexcept { return end.get_left(); }
-  node* get() noexcept { return end.get_left(); }
+  const node* get() const { return end.get_left(); }
+  node* get() { return end.get_left(); }
 
   const end_node* end_node_ptr() const { return std::addressof(end); }
   end_node* end_node_ptr() { return std::addressof(end); }
