@@ -15,14 +15,13 @@ Implementation of Red-Black search tree.
 
 ### Testing
 Available test options are:
- 1. <code>interactive</code>: interactive test - builds executable in <code>./build/bin</code> subdirectory, that should be executed explicitly by user. Interactive test reads input from stdin and performs range queries of two types: 'k' - insertion  - and 'q' - distance. Insertion query takes one int argument - this argument is inserted in tree. Distance query takes two arguments and calculates distance between two elements in tree. Second element must be greater or equal than the first. Result is written out to stdout. 
+ 1. Interactive end-to-end tests: <code>rbtree</code> and <code>sdtset</code> - builds executables in <code>./build/bin</code> subdirectory, that should be executed explicitly by user. Interactive test reads input from stdin and performs range queries of two types: 'k' - insertion  - and 'q' - distance. Insertion query takes one int argument - this argument is inserted in tree. Distance query takes two arguments and calculates distance between two elements in tree. Second element must be greater or equal than the first. Result is written out to stdout. RBTREE::rbtree and std::set are used in <code>rbtree</code> and <code>stdset</code> tests accordingly.
  Example of input: <code>k 10 k 20 k 30 q 10 30 q 20 20 q 10 20</code>
  Output in this case will be: <code>2 0 1 </code>
 
  Options, available for configuring interactive testing:
- - <code>STDDIST</code> - enables use of std::distance for q-queries instead of fast distance implementation.
-  - <code>STDSET</code> - enables use of std::set for q-queries instead of RBTREE::rbtree.
- - <code>MEASURE_TIME</code> - disables output of results on interactive test and enables time measurement with std::chrono features. Instead of result of queries, test will show elapsed time. Results of queries are written to file <code>res.txt</code>. Example of output: <code> Elapsed time: 1 ms 527 µs 166 ns </code>
+ - <code>STDDIST</code> - enables use of std::distance for q-queries instead of fast distance implementation in <code>rbtree</code> target.
+ - <code>MEASURE_TIME</code> - disables output of results on interactive test and enables time measurement with std::chrono features. Works for both <code>rbtree</code> and <code>stdset</code> tests. Instead of result of queries, test will show elapsed time. Results of queries are written to file <code>res.txt</code>. Example of output: <code> Elapsed time: 1 ms 527 µs 166 ns </code>
 
  2. <code>unit</code> and <code>query</code> - these tests are implemented with GoogleTest. To run tests, following commands should be run after building targets: 
   - <code>cd build</code>

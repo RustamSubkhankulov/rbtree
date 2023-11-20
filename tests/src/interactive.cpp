@@ -59,10 +59,18 @@ int main() {
 
   /* Construct empty tree - RBTREE::rbtree. */
   #if defined(STDSET)
+    std::cerr << "std::set \n";
     std::set<int> set;
   #else 
+    std::cerr << "RBTREE::rbtere \n";
     RBTREE:rbtree<int> set;
   #endif 
+
+  #if defined(STDDIST) || defined(STDSET)
+    std::cerr << "slow \n";
+  #else 
+    std::cerr << "fast \n";
+  #endif
 
   /* Read sequence of queries. */
   query_seq q_seq;
@@ -115,7 +123,7 @@ int main() {
         diff_t res;
 
         /* Perform query and write out result. */
-        #if defined(STDDIST)
+        #if defined(STDDIST) || defined(STDSET)
           res = query_q_distance(set, first, second);
         #else 
           res = query_q_distance_fast(set, first, second);

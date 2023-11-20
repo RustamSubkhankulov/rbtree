@@ -1,3 +1,5 @@
+/* Use std::distance instead of RBTREE::rbtree::distance() in interactive test with rbtree */
 #cmakedefine STDDIST @STDDIST@
-#cmakedefine STDSET @STDSET@
+
+/* Measure time in interactive test */
 #cmakedefine MEASURE_TIME @MEASURE_TIME@
