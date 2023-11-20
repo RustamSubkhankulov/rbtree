@@ -16,7 +16,7 @@ TEST_TARGET(interactive)
 TEST_TARGET(query)
 TEST_TARGET(unit)
 
-option(STDDIST "Use std::disnatce instead of RBTREE::rbtree::distance() in interactive test" OFF)
+option(STDDIST "Use std::distance instead of RBTREE::rbtree::distance() in interactive test" OFF)
 option(STDSET "Use std::set instead of RBTREE::rbtree in interactive test" OFF)
 option(MEASURE_TIME "Measure time in interactive test" OFF)
 
