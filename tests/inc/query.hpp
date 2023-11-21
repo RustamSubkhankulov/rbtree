@@ -26,21 +26,25 @@ template <template<typename...> class Set, typename Key>
 typename Set<Key>::difference_type 
 query_distance(Set<Key>& set, const Key& first, const Key& second) {
 
-  std::cerr << "first " << first << " second " << second << "\n";
-
   auto comp = set.key_comp();
+  auto equiv = [&comp](const Key& first, const Key& second) -> bool { 
+    return !comp(first, second) && !comp(second, first);
+  };
 
   if (comp(second, first)) {
     return 0;
   }
 
-  auto it_first = set.lower_bound(first), it_second = set.lower_bound(second);
-  
-  std::cerr << "*first " << *it_first << " *second " << *it_second << "\n";
-
+  auto it_first = set.lower_bound(first), it_second = set.lower_bound(second);  
   auto res = std::distance(it_first, it_second);
 
-  std::cerr << "res " << res << "\n";
+  if (it_first != set.end() && equiv(first, *it_first) && first != second) {
+    res -= 1;
+  }
+
+  if (it_second != set.end() && equiv(second, *it_second)) {
+    res += 1;
+  }
 
   return res;
 }
@@ -48,15 +52,28 @@ query_distance(Set<Key>& set, const Key& first, const Key& second) {
 /* fast q-query implementation using distance() method for RBTREE::rbtree. */
 template <typename Key>
 typename RBTREE::rbtree<Key>::difference_type 
-query_distance_fast(RBTREE::rbtree<Key>& rbtree, const Key& first, const Key& second) {
+query_distance_fast(RBTREE::rbtree<Key>& set, const Key& first, const Key& second) {
 
-  return rbtree.distance(first, second);
+  auto comp = set.key_comp();
+  auto equiv = [&comp](const Key& first, const Key& second) -> bool { 
+    return !comp(first, second) && !comp(second, first);
+  };
+
+  if (comp(second, first)) {
+    return 0;
+  }
+
+  auto it_first = set.lower_bound(first), it_second = set.lower_bound(second);  
+  auto res = set.distance(it_first, it_second);
+
+  if (it_first != set.end() && equiv(first, *it_first) && first != second) {
+    res -= 1;
+  }
+
+  if (it_second != set.end() && equiv(second, *it_second)) {
+    res += 1;
+  }
+
+  return res;
 }
 
-template <typename Key>
-typename RBTREE::rbtree<Key>::difference_type 
-query_distance_fast(RBTREE::rbtree<Key>& rbtree, typename RBTREE::rbtree<Key>::const_iterator first, 
-                                                   typename RBTREE::rbtree<Key>::const_iterator second) {
-
-  return rbtree.distance(first, second);
-}
