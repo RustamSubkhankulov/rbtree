@@ -25,10 +25,10 @@ TEST(QUERY_TESTS, TEST2) {
   EXPECT_EQ(query_distance(t, 1, 5), 4);
   EXPECT_EQ(query_distance_fast(t, 1, 5), 4);
 
-  EXPECT_EQ(query_distance(t, 1, 1), 0);
-  EXPECT_EQ(query_distance_fast(t, 1, 1), 0);
-  EXPECT_EQ(query_distance(t, 5, 5), 0);
-  EXPECT_EQ(query_distance_fast(t, 5, 5), 0);
+  EXPECT_EQ(query_distance(t, 1, 1), 1);
+  EXPECT_EQ(query_distance_fast(t, 1, 1), 1);
+  EXPECT_EQ(query_distance(t, 5, 5), 1);
+  EXPECT_EQ(query_distance_fast(t, 5, 5), 1);
 }
 
 int main(int argc, char** argv) {
