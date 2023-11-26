@@ -119,13 +119,79 @@ public:
   virtual node_t* parent() const { return nullptr; }
 };
 
+/* Root node temaplte class. */
+template <typename Node>
+class root final {
+
+public:
+
+  using node = Node;
+  /* Corresponding end node type. */
+  using end_node = typename Node::end_node;
+
+private:
+
+  /* End node of the tree. */
+  end_node end;
+
+public:
+
+  root(node* root = nullptr) 
+  noexcept(std::is_nothrow_default_constructible_v<end_node> && 
+           noexcept(set(std::declval<node*>()))) {
+    set(root);
+  }
+
+  root(const root& that) = delete;
+  root& operator=(const root& that) = delete;
+
+  root(root&& that) 
+  noexcept(noexcept(set(std::declval<node*>()))) {
+    set(that.set(nullptr));
+  }
+
+  void swap(root& that) 
+  noexcept(noexcept(set(std::declval<node*>()))) {
+    set(that.set(end.get_left()));
+  }
+
+  root& operator=(root&& that) 
+  noexcept(noexcept(swap(std::declval<root&>()))) {
+    
+    swap(that);
+    return *this;
+  }
+
+  ~root() {
+    clear();
+  }
+
+  void clear() {
+    node::free_subtree(get(), end_node_ptr());
+    set(nullptr);
+  }
+
+  node* set(node* root) 
+  noexcept(noexcept(std::declval<end_node>().tie_left(std::declval<node*>()))) { 
+    return end.tie_left(root);
+  }
+  const node* get() const noexcept { return end.get_left(); }
+  node* get() noexcept { return end.get_left(); }
+
+  const end_node* end_node_ptr() const { return std::addressof(end); }
+  end_node* end_node_ptr() { return std::addressof(end); }
+};
+
 /* Node structure used in searching tree. */
 template <typename Key>
 class node_t : public end_node_t<node_t<Key>> {
 
 public:
 
-  /*Base class type*/
+  /* Root node type. */
+  using root_type = root<node_t>;
+
+  /* Base class type. */
   using end_node = end_node_t<node_t>;
 
   /* Key value that node holds. */
@@ -340,22 +406,22 @@ public:
     const node_t* root;
     const end_node* leftmost;
     const end_node* rightmost;
+    const end_node* end_node_ptr;
   };
 
   /* Structure holding info about newly made subtree copy. */
   struct subtree_copy_t {
 
-    node_t* root;
-    end_node* leftmost;
-    end_node* rightmost;
+    root_type root;
+    end_node* leftmost  = nullptr;
+    end_node* rightmost = nullptr;
   };
 
   /* Make a copy of subtree. */
-  static subtree_copy_t copy_subtree(const subtree_info_t subtree_info, 
-                                     const      end_node* end_node_ptr);
+  static void copy_subtree(subtree_copy_t& subtree_copy, const subtree_info_t& subtree_info);
 
-  static void copy_subtree_impl(subtree_copy_t& subtree_copy, const subtree_info_t subtree_info, 
-                                                                   const end_node* end_node_ptr);
+  static void copy_subtree_impl(subtree_copy_t& subtree_copy, const subtree_info_t& subtree_info,
+                                                              const node_t* subtree, node_t* copy);
 
   /* Stitch each node in subtree. */
   static void stitch_subtree(node_t* subtree) noexcept;
@@ -399,33 +465,25 @@ public:
 };
 
 template <typename Key>
-node_t<Key>::subtree_copy_t 
-node_t<Key>::copy_subtree(const subtree_info_t subtree_info, const end_node* end_node_ptr) {
-
-  subtree_copy_t subtree_copy{};
+void node_t<Key>::copy_subtree(subtree_copy_t& subtree_copy, const subtree_info_t& subtree_info) {
 
   if (subtree_info.root == nullptr) {
-    return subtree_copy;
+    return;
   }
 
-  try {
-    copy_subtree_impl(subtree_copy, subtree_info, end_node_ptr);
+  const node_t* subtree = subtree_info.root;
 
-  } catch (...) {
-    node_t::free_subtree(subtree_copy.root, end_node_ptr);
-    throw;
-  }
-
-  return subtree_copy;
+  node_t* copy = new node_t(*subtree), *child;
+  subtree_copy.root.set(copy);
+  
+  copy_subtree_impl(subtree_copy, subtree_info, subtree, copy);
 }
 
 template <typename Key>
-void node_t<Key>::copy_subtree_impl(subtree_copy_t& subtree_copy, const subtree_info_t subtree_info, 
-                                                                  const end_node* end_node_ptr) {
+void node_t<Key>::copy_subtree_impl(subtree_copy_t& subtree_copy, const subtree_info_t& subtree_info,
+                                                                  const node_t* subtree, node_t* copy) {
 
-  const node_t* subtree = subtree_info.root;
-  node_t* copy = subtree_copy.root = new node_t(*subtree), *child;
-  end_node* parent;
+  end_node *parent;
 
   do {
 
@@ -456,7 +514,7 @@ void node_t<Key>::copy_subtree_impl(subtree_copy_t& subtree_copy, const subtree_
       subtree = subtree->parent();
     }
 
-  } while (parent != end_node_ptr);
+  } while (parent != subtree_info.end_node_ptr);
 }
 
 template <typename Key>
@@ -763,58 +821,6 @@ bool node_t<Key>::debug_validate() const {
 
   return (rb_res && size_res);
 }
-
-template <typename Node>
-class root final {
-
-public:
-
-  using node = Node;
-  using end_node = typename Node::end_node;
-
-private:
-
-  end_node end;
-
-public:
-
-  root(node* root = nullptr) 
-  noexcept(std::is_nothrow_default_constructible_v<end_node> && 
-           noexcept(set(std::declval<node*>()))) {
-    set(root);
-  }
-
-  root(const root& that) = delete;
-  root& operator=(const root& that) = delete;
-
-  root(root&& that) 
-  noexcept(noexcept(set(std::declval<node*>()))) {
-    set(that.set(nullptr));
-  }
-
-  void swap(root& that) 
-  noexcept(noexcept(set(std::declval<node*>()))) {
-    set(that.set(end.get_left()));
-  }
-
-  root& operator=(root&& that) 
-  noexcept(noexcept(swap(std::declval<root&>()))) {
-    
-    swap(that);
-    return *this;
-  }
-
-  node* set(node* root) 
-  noexcept(noexcept(std::declval<end_node>().tie_left(std::declval<node*>()))) { 
-    return end.tie_left(root);
-  }
-  
-  const node* get() const { return end.get_left(); }
-  node* get() { return end.get_left(); }
-
-  const end_node* end_node_ptr() const { return std::addressof(end); }
-  end_node* end_node_ptr() { return std::addressof(end); }
-};
 
 /* Write node desctiption in dot format to temporary text file. */
 template <typename Key>

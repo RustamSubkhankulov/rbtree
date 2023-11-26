@@ -45,6 +45,13 @@ private:
 
   /* Node structure */
   using node = dtl::node_t<key_type>;
+  
+  /* Subtree copy struct type. */
+  using subtree_copy_type = typename node::subtree_copy_t;
+
+  /* Subtree info struct type. */
+  using subtree_info_type = typename node::subtree_info_t;
+
   /* Static end node type used for implementing post-end iterator */
   using end_node = typename node::end_node;
 
@@ -94,9 +101,10 @@ public:
   rbtree(const rbtree& that)
   : cmp(that.cmp) {
 
-    auto copy = that.copy_subtree(that.root.get());
+    subtree_copy_type copy;
+    that.copy_subtree(copy, that.root.get());
     
-    root.set(copy.root);
+    root = std::move(copy.root);
     leftmost = (copy.leftmost)? copy.leftmost : end_node_ptr();
     rightmost = (copy.rightmost)? copy.rightmost : end_node_ptr();
 
@@ -135,9 +143,7 @@ public:
     return *this;
   }
 
-  virtual ~rbtree() {
-    free_subtree(root.get());
-  }
+  virtual ~rbtree() = default;
 
   /* Insertion. */
   std::pair<const_iterator, bool> insert(key_type&& key);
@@ -260,10 +266,7 @@ private:
   void relink_rightmost(const rbtree& that) noexcept;
 
   /* Make a copy of subtree. */
-  node::subtree_copy_t copy_subtree(const node* subtree) const;
-
-  /* Free given subtree. */
-  void free_subtree(node* subtree) const noexcept;
+  void copy_subtree(subtree_copy_type& subtree_copy, const node* subtree) const;
 
   /* Equivalence relationship deduced from compare function. */
   bool equiv(const key_type& lhs, const key_type& rhs) const {
@@ -497,23 +500,16 @@ bool rbtree<Key, Compare>::erase(const key_type& key) {
 template <typename Key, typename Compare>
 void rbtree<Key, Compare>::clear() noexcept {
 
-  free_subtree(root.get());
-  root.set(nullptr);
+  root.clear();
   leftmost = root.end_node_ptr();
   rightmost = root.end_node_ptr();
 }
 
 template <typename Key, typename Compare>
-typename rbtree<Key, Compare>::node::subtree_copy_t 
-rbtree<Key, Compare>::copy_subtree(const node* subtree) const {
+void rbtree<Key, Compare>::copy_subtree(subtree_copy_type& subtree_copy, const node* subtree) const {
 
-  return node::copy_subtree((struct node::subtree_info_t){subtree, leftmost, rightmost}, end_node_ptr());
-}
-
-template <typename Key, typename Compare>
-void rbtree<Key, Compare>::free_subtree(node* subtree) const noexcept {
-
-  node::free_subtree(subtree, end_node_ptr());
+  subtree_info_type subtree_info{subtree, leftmost, rightmost, end_node_ptr()};
+  node::copy_subtree(subtree_copy, subtree_info);
 }
 
 template <typename Key, typename Compare>
