@@ -429,6 +429,12 @@ public:
   /* Free given subtree. */
   static void free_subtree(node_t* subtree, const end_node* end_node_ptr) noexcept;
 
+  /* Increase subtree size for each node in route from nd to root by 1. */
+  static void incr_subtree_sizes(end_node* nd, const end_node* end_node_ptr);
+
+  /* Decrease subtree size for each node in route from nd to root by 1. */
+  static void decr_subtree_sizes(end_node* nd, const end_node* end_node_ptr);
+
   /* Get previous node. */
   const end_node* get_prev() const noexcept;
   end_node* get_prev() noexcept;
@@ -581,6 +587,38 @@ void node_t<Key>::free_subtree(node_t* subtree, const end_node* end_node_ptr) no
     }
 
   } while (parent != end_node_ptr);
+}
+
+template <typename Key>
+void node_t<Key>::incr_subtree_sizes(end_node* nd, const end_node* end_node_ptr) {
+
+  if (nd == nullptr) {
+    return;
+  }
+
+  node_t* cur;
+  while (nd != end_node_ptr) {
+
+    cur = static_cast<node_t*>(nd);
+    ++cur->size;
+    nd = cur->parent_as_end();
+  }
+}
+
+template <typename Key>
+void node_t<Key>::decr_subtree_sizes(end_node* nd, const end_node* end_node_ptr) {
+  
+  if (nd == nullptr) {
+    return;
+  }
+
+  node_t* cur;
+  while (nd != end_node_ptr) {
+
+    cur = static_cast<node_t*>(nd);
+    --cur->size;
+    nd = cur->parent_as_end();
+  }
 }
 
 template <typename Key>

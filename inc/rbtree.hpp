@@ -304,7 +304,7 @@ private:
   void update_prev(end_node* prev);
   void update_next(end_node* next);
   
-  /* Helper rebalancing functions. */
+  /* Helper rebalancing functions on deletion. */
   std::pair<node*, node*> get_y_and_its_decs(node* y);
   void  delete_rb_rebalance(node* x, node* parent_of_x);
   node* delete_rb_rebalance_w_is_red(node* w, bool x_on_left, node* parent_of_x);
@@ -319,7 +319,6 @@ private:
   
   /* Increase subtree size for each node in route from nd to root by 1. */
   void incr_subtree_sizes(end_node* nd);
-
   /* Decrease subtree size for each node in route from nd to root by 1. */
   void decr_subtree_sizes(end_node* nd);
 
@@ -662,9 +661,7 @@ bool rbtree<Key, Compare>::insert_node(node* inserting) {
   if (empty()) {
 
     root.set(inserting);
-    
     leftmost = rightmost = inserting;
-    
     inserting->paint(node::color::BLACK);
 
   } else {
@@ -1084,33 +1081,13 @@ rbtree<Key, Compare>::delete_rb_fix(node* z) {
 template <typename Key, typename Compare>
 void rbtree<Key, Compare>::incr_subtree_sizes(end_node* nd) {
 
-  if (nd == nullptr) {
-    return;
-  }
-
-  node* cur;
-  while (nd != end_node_ptr()) {
-
-    cur = static_cast<node*>(nd);
-    ++cur->size;
-    nd = cur->parent_as_end();
-  }
+  node::incr_subtree_sizes(nd, end_node_ptr());
 }
 
 template <typename Key, typename Compare>
 void rbtree<Key, Compare>::decr_subtree_sizes(end_node* nd) {
 
-  if (nd == nullptr) {
-    return;
-  }
-
-  node* cur;
-  while (nd != end_node_ptr()) {
-
-    cur = static_cast<node*>(nd);
-    --cur->size;
-    nd = cur->parent_as_end();
-  }
+  node::decr_subtree_sizes(nd, end_node_ptr());
 }
 
 template <typename Key, typename Compare>
