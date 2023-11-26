@@ -35,18 +35,8 @@ query_distance(Set<Key>& set, const Key& first, const Key& second) {
     return 0;
   }
 
-  auto it_first = set.lower_bound(first), it_second = set.lower_bound(second);  
-  auto res = std::distance(it_first, it_second);
-
-  if (it_first != set.end() && equiv(first, *it_first) && first != second) {
-    res -= 1;
-  }
-
-  if (it_second != set.end() && equiv(second, *it_second)) {
-    res += 1;
-  }
-
-  return res;
+  auto it_first = set.lower_bound(first), it_second = set.upper_bound(second);  
+  return std::distance(it_first, it_second);
 }
 
 /* fast q-query implementation using distance() method for RBTREE::rbtree. */
@@ -63,17 +53,7 @@ query_distance_fast(RBTREE::rbtree<Key>& set, const Key& first, const Key& secon
     return 0;
   }
 
-  auto it_first = set.lower_bound(first), it_second = set.lower_bound(second);  
-  auto res = set.distance(it_first, it_second);
-
-  if (it_first != set.end() && equiv(first, *it_first) && first != second) {
-    res -= 1;
-  }
-
-  if (it_second != set.end() && equiv(second, *it_second)) {
-    res += 1;
-  }
-
-  return res;
+  auto it_first = set.lower_bound(first), it_second = set.upper_bound(second);  
+  return set.distance(it_first, it_second);
 }
 

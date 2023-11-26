@@ -22,13 +22,33 @@ TEST(QUERY_TESTS, TEST2) {
 
   tree t = {1, 2, 3, 4, 5};
   
-  EXPECT_EQ(query_distance(t, 1, 5), 4);
-  EXPECT_EQ(query_distance_fast(t, 1, 5), 4);
+  EXPECT_EQ(query_distance(t, 1, 5), 5);
+  EXPECT_EQ(query_distance_fast(t, 1, 5), 5);
 
   EXPECT_EQ(query_distance(t, 1, 1), 1);
   EXPECT_EQ(query_distance_fast(t, 1, 1), 1);
   EXPECT_EQ(query_distance(t, 5, 5), 1);
   EXPECT_EQ(query_distance_fast(t, 5, 5), 1);
+}
+
+TEST(QUERY_TESTS, TEST3) {
+
+  tree t;
+
+  t.insert(10);
+  t.insert(20);
+
+  EXPECT_EQ(query_distance(t, 8, 31), 2);
+  EXPECT_EQ(query_distance_fast(t, 8, 31), 2);
+
+  EXPECT_EQ(query_distance(t, 6, 9), 0);
+  EXPECT_EQ(query_distance_fast(t, 6, 9), 0);
+
+  t.insert(30);
+  t.insert(40);
+
+  EXPECT_EQ(query_distance(t, 15, 40), 3);
+  EXPECT_EQ(query_distance_fast(t, 15, 40), 3);
 }
 
 int main(int argc, char** argv) {
