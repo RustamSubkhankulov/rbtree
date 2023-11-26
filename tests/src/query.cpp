@@ -23,15 +23,20 @@ TEST(QUERY_TESTS, TEST2) {
   tree t = {1, 2, 3, 4, 5};
   
   EXPECT_EQ(query_distance(t, 1, 5), 5);
-  EXPECT_EQ(query_distance_fast(t, 1, 5), 5);
-
   EXPECT_EQ(query_distance(t, 1, 1), 1);
-  EXPECT_EQ(query_distance_fast(t, 1, 1), 1);
   EXPECT_EQ(query_distance(t, 5, 5), 1);
-  EXPECT_EQ(query_distance_fast(t, 5, 5), 1);
 }
 
 TEST(QUERY_TESTS, TEST3) {
+
+  tree t = {1, 2, 3, 4, 5};
+  
+  EXPECT_EQ(query_distance_fast(t, 1, 5), 5);
+  EXPECT_EQ(query_distance_fast(t, 1, 1), 1);
+  EXPECT_EQ(query_distance_fast(t, 5, 5), 1);
+}
+
+TEST(QUERY_TESTS, TEST4) {
 
   tree t;
 
@@ -39,16 +44,60 @@ TEST(QUERY_TESTS, TEST3) {
   t.insert(20);
 
   EXPECT_EQ(query_distance(t, 8, 31), 2);
-  EXPECT_EQ(query_distance_fast(t, 8, 31), 2);
-
   EXPECT_EQ(query_distance(t, 6, 9), 0);
-  EXPECT_EQ(query_distance_fast(t, 6, 9), 0);
 
   t.insert(30);
   t.insert(40);
 
   EXPECT_EQ(query_distance(t, 15, 40), 3);
+}
+
+TEST(QUERY_TESTS, TEST5) {
+
+  tree t;
+
+  t.insert(10);
+  t.insert(20);
+
+  EXPECT_EQ(query_distance_fast(t, 8, 31), 2);
+  EXPECT_EQ(query_distance_fast(t, 6, 9), 0);
+
+  t.insert(30);
+  t.insert(40);
+
   EXPECT_EQ(query_distance_fast(t, 15, 40), 3);
+}
+
+TEST(QUERY_TESTS, TEST6) {
+
+  tree t = {1, 3, 4, 5, 6, 8, 10};
+
+  EXPECT_EQ(query_distance(t,  5,  0), 0);
+  EXPECT_EQ(query_distance(t,  0,  6), 5);
+  EXPECT_EQ(query_distance(t,  7,  9), 1);
+  EXPECT_EQ(query_distance(t,  6,  6), 1);
+  EXPECT_EQ(query_distance(t, 10,  0), 0);
+  EXPECT_EQ(query_distance(t, 10, 10), 1);
+  EXPECT_EQ(query_distance(t, 10,  9), 0);
+  EXPECT_EQ(query_distance(t,  6, 10), 3);
+  EXPECT_EQ(query_distance(t,  5,  2), 0);
+  EXPECT_EQ(query_distance(t, 10,  6), 0);
+}
+
+TEST(QUERY_TESTS, TEST7) {
+
+  tree t = {1, 3, 4, 5, 6, 8, 10};
+
+  EXPECT_EQ(query_distance_fast(t,  5,  0), 0);
+  EXPECT_EQ(query_distance_fast(t,  0,  6), 5);
+  EXPECT_EQ(query_distance_fast(t,  7,  9), 1);
+  EXPECT_EQ(query_distance_fast(t,  6,  6), 1);
+  EXPECT_EQ(query_distance_fast(t, 10,  0), 0);
+  EXPECT_EQ(query_distance_fast(t, 10, 10), 1);
+  EXPECT_EQ(query_distance_fast(t, 10,  9), 0);
+  EXPECT_EQ(query_distance_fast(t,  6, 10), 3);
+  EXPECT_EQ(query_distance_fast(t,  5,  2), 0);
+  EXPECT_EQ(query_distance_fast(t, 10,  6), 0);
 }
 
 int main(int argc, char** argv) {
