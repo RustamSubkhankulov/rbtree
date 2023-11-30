@@ -29,20 +29,23 @@ option(MEASURE_TIME "Measure time in interactive test" OFF)
 configure_file(${CNF}/interactive_conf.hpp.in interactive_conf.hpp @ONLY)
 target_compile_definitions(stdset_query PRIVATE STDSET)
 
-include(FetchContent)
+find_package(GTest)
+if (NOT GTest_FOUND)
+  include(FetchContent)
 
-option(BUILD_GMOCK OFF)
-option(INSTALL_GTEST OFF)
+  option(BUILD_GMOCK OFF)
+  option(INSTALL_GTEST OFF)
 
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        v1.14.0
-)
-FetchContent_MakeAvailable(googletest)
+  FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        v1.14.0
+  )
+  FetchContent_MakeAvailable(googletest)
 
-add_library(GTest::GTest INTERFACE IMPORTED)
-target_link_libraries(GTest::GTest INTERFACE gtest_main)
+  add_library(GTest::GTest INTERFACE IMPORTED)
+  target_link_libraries(GTest::GTest INTERFACE gtest_main)
+endif()
 
 target_link_libraries(query PRIVATE GTest::GTest)
 target_link_libraries(unit PRIVATE GTest::GTest)
