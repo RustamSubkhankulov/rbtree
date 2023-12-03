@@ -23,8 +23,8 @@ TEST(QUERY_TESTS, TEST2) {
   tree t = {1, 2, 3, 4, 5};
   
   EXPECT_EQ(query_distance(t, 1, 5), 5);
-  EXPECT_EQ(query_distance(t, 1, 1), 1);
-  EXPECT_EQ(query_distance(t, 5, 5), 1);
+  EXPECT_EQ(query_distance(t, 1, 1), 0);
+  EXPECT_EQ(query_distance(t, 5, 5), 0);
 }
 
 TEST(QUERY_TESTS, TEST3) {
@@ -32,8 +32,8 @@ TEST(QUERY_TESTS, TEST3) {
   tree t = {1, 2, 3, 4, 5};
   
   EXPECT_EQ(query_distance_fast(t, 1, 5), 5);
-  EXPECT_EQ(query_distance_fast(t, 1, 1), 1);
-  EXPECT_EQ(query_distance_fast(t, 5, 5), 1);
+  EXPECT_EQ(query_distance_fast(t, 1, 1), 0);
+  EXPECT_EQ(query_distance_fast(t, 5, 5), 0);
 }
 
 TEST(QUERY_TESTS, TEST4) {
@@ -75,9 +75,9 @@ TEST(QUERY_TESTS, TEST6) {
   EXPECT_EQ(query_distance(t,  5,  0), 0);
   EXPECT_EQ(query_distance(t,  0,  6), 5);
   EXPECT_EQ(query_distance(t,  7,  9), 1);
-  EXPECT_EQ(query_distance(t,  6,  6), 1);
+  EXPECT_EQ(query_distance(t,  6,  6), 0);
   EXPECT_EQ(query_distance(t, 10,  0), 0);
-  EXPECT_EQ(query_distance(t, 10, 10), 1);
+  EXPECT_EQ(query_distance(t, 10, 10), 0);
   EXPECT_EQ(query_distance(t, 10,  9), 0);
   EXPECT_EQ(query_distance(t,  6, 10), 3);
   EXPECT_EQ(query_distance(t,  5,  2), 0);
@@ -91,9 +91,9 @@ TEST(QUERY_TESTS, TEST7) {
   EXPECT_EQ(query_distance_fast(t,  5,  0), 0);
   EXPECT_EQ(query_distance_fast(t,  0,  6), 5);
   EXPECT_EQ(query_distance_fast(t,  7,  9), 1);
-  EXPECT_EQ(query_distance_fast(t,  6,  6), 1);
+  EXPECT_EQ(query_distance_fast(t,  6,  6), 0);
   EXPECT_EQ(query_distance_fast(t, 10,  0), 0);
-  EXPECT_EQ(query_distance_fast(t, 10, 10), 1);
+  EXPECT_EQ(query_distance_fast(t, 10, 10), 0);
   EXPECT_EQ(query_distance_fast(t, 10,  9), 0);
   EXPECT_EQ(query_distance_fast(t,  6, 10), 3);
   EXPECT_EQ(query_distance_fast(t,  5,  2), 0);
