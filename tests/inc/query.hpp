@@ -31,7 +31,7 @@ query_distance(Set<Key>& set, const Key& first, const Key& second) {
     return !comp(first, second) && !comp(second, first);
   };
 
-  if (comp(second, first)) {
+  if (!comp(first, second)) {
     return 0;
   }
 
@@ -49,7 +49,7 @@ query_distance_fast(RBTREE::rbtree<Key>& set, const Key& first, const Key& secon
     return !comp(first, second) && !comp(second, first);
   };
 
-  if (comp(second, first)) {
+  if (!comp(first, second)) {
     return 0;
   }
 
