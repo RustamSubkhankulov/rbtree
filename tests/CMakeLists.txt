@@ -25,6 +25,8 @@ TEST_TARGET(unit unit)
 
 option(STDDIST "Use std::distance instead of RBTREE::rbtree::distance() in interactive test with rbtree" OFF)
 option(MEASURE_TIME "Measure time in interactive test" OFF)
+option(DUMP_DOT "Dot dump of the rbtree at the end of the custom_query test" OFF)
+option(DEBUG "Debug info printing in interactive tests" OFF)
 
 configure_file(${CNF}/interactive_conf.hpp.in interactive_conf.hpp @ONLY)
 target_compile_definitions(stdset_query PRIVATE STDSET)

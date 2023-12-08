@@ -22,6 +22,8 @@ Available test options are:
  Options, available for configuring interactive testing:
  - <code>STDDIST</code> - enables use of std::distance for q-queries instead of fast distance implementation in <code>custom_query</code> target.
  - <code>MEASURE_TIME</code> - disables output of results on interactive test and enables time measurement with std::chrono features. Works for both <code>custom_query</code> and <code>stdset_query</code> tests. Instead of result of queries, test will show elapsed time. Results of queries are written to file <code>res.txt</code>. Example of output: <code> Elapsed time: 1 ms 527 µs 166 ns </code>
+ - <code>DEBUG</code>code> - enables additional debug info printing in <code>custom_query</code> and <code>stdset_query</code> tests.
+ - <code>DUMP_DOT</code> - enables graphical dump at the end of <code>custom_query</code> test. Output is <code>dot.txt</code> file in project directory root, containing dump in dot format, that could be converted to image using 'dot'.
 
  2. <code>unit</code> and <code>query</code> - these tests are implemented with GoogleTest. To run tests, following commands should be run after building targets: 
   - <code>cd build</code>

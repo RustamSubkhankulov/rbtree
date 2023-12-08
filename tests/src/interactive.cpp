@@ -9,6 +9,10 @@
 #include <iostream>
 #include <algorithm>
 
+#if defined(DUMP_DOT) && !defined(STDSET)
+  #include <fstream>
+#endif 
+
 #include "rbtree.hpp"
 #include "query.hpp"
 
@@ -101,6 +105,10 @@ int main() {
         /* Perform query. */
         query_insert(set, key);
 
+        #if defined(DEBUG)
+          std::cout << "k " << key << std::endl;
+        #endif 
+
         break;
       }
 
@@ -120,6 +128,11 @@ int main() {
           res = query_distance(set, first, second);
         #else 
           res = query_distance_fast(set, first, second);
+        #endif
+
+        #if defined(DEBUG)
+          std::cout << "q " << first << " " << second << " "
+                    << "res: " << res << std::endl;
         #endif
 
         results.push_back(res);        
@@ -149,6 +162,12 @@ int main() {
       print_results(results_file, results);
     }
   #endif
+
+  #if defined(DUMP_DOT) && !defined(STDSET)
+    #include <fstream>
+    std::ofstream dot("dot.txt");
+    set.graph_dump(dot);
+  #endif 
 
   return EXIT_SUCCESS;
 }

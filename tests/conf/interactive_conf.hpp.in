@@ -3,3 +3,9 @@
 
 /* Measure time in interactive test */
 #cmakedefine MEASURE_TIME @MEASURE_TIME@
+
+/* Dot dump of the rbtree at the end of the custom_query test */
+#cmakedefine DUMP_DOT @DUMP_DOT@
+
+/* Debug info printing in interactive tests */
+#cmakedefine DEBUG @DEBUG@
