@@ -27,10 +27,6 @@ typename Set<Key>::difference_type
 query_distance(Set<Key>& set, const Key& first, const Key& second) {
 
   auto comp = set.key_comp();
-  auto equiv = [&comp](const Key& first, const Key& second) -> bool { 
-    return !comp(first, second) && !comp(second, first);
-  };
-
   if (!comp(first, second)) {
     return 0;
   }
@@ -45,10 +41,6 @@ typename RBTREE::rbtree<Key>::difference_type
 query_distance_fast(RBTREE::rbtree<Key>& set, const Key& first, const Key& second) {
 
   auto comp = set.key_comp();
-  auto equiv = [&comp](const Key& first, const Key& second) -> bool { 
-    return !comp(first, second) && !comp(second, first);
-  };
-
   if (!comp(first, second)) {
     return 0;
   }

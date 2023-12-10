@@ -221,11 +221,11 @@ public:
   /* Distance between two nodes, defined by keys. */
 
   difference_type distance(const_iterator first, const_iterator second) const {
-    return less_than(*second) - less_than(*first);
+    return static_cast<difference_type>(less_than(*second) - less_than(*first));
   }
 
   difference_type distance(const key_type& first, const key_type& second) const {
-    return less_than(second) - less_than(first);
+    return static_cast<difference_type>(less_than(second) - less_than(first));
   }
 
   /* Returns an iterator to the first element not less than the given key */

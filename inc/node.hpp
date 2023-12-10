@@ -479,7 +479,7 @@ void node_t<Key>::copy_subtree(subtree_copy_t& subtree_copy, const subtree_info_
 
   const node_t* subtree = subtree_info.root;
 
-  node_t* copy = new node_t(*subtree), *child;
+  node_t* copy = new node_t(*subtree);
   subtree_copy.root.set(copy);
   
   copy_subtree_impl(subtree_copy, subtree_info, subtree, copy);
@@ -868,7 +868,7 @@ template <typename Key>
     os << "NODE" << this << " ["
        << " label = < " << value << " <BR /> "
        << " <FONT POINT-SIZE=\"10\"> size: " << size << " </FONT> <BR /> "
-       << " <FONT POINT-SIZE=\"10\"> addr: " << (void*) this << " </FONT>> "
+       << " <FONT POINT-SIZE=\"10\"> addr: " << static_cast<void*>(this) << " </FONT>> "
        << " color = \"" << (is_red()? "#FD0000" : "#000000") << "\""
        << " fontcolor = \"" << (is_black()? "#FFFFFF" : "#000000") << "\""
        << " ]; \n";
